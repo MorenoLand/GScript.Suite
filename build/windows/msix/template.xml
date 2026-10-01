@@ -17,7 +17,7 @@
         PackageDisplayName="GSuite"
         PublisherName="CN=MorenoLand"
         PublisherDisplayName="MorenoLand"
-        Version="0.1.84.0"
+        Version="0.1.85.0"
         PackageDescription="GSuite desktop editor">
         <Capabilities>
             <Capability Name="runFullTrust" />

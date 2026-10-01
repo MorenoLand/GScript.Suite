@@ -1,5 +1,20 @@
 [
   {
+    "version": "0.1.85",
+    "date": "2026-09-11",
+    "tag": "GSuite",
+    "changes": [
+      "Script editor popups no longer close when clicking outside the editor",
+      "Restored bundled Monaco GraalScript syntax highlighting for Wails builds",
+      "Fixed the Wails workspace GANI browser opening scanned files through the browser File API",
+      "GANI open and import errors now identify invalid or encrypted files",
+      "Player nickname and chat labels use zoom-aware Tempus Sans emboldening",
+      "Added a local Android APK build task with the GSuite launcher icon",
+      "Configured the GSuite app icon in macOS and Android bundles",
+      "Updated the Wails runtime to v3.0.0-beta.11"
+    ]
+  },
+  {
     "version": "0.1.84",
     "date": "2026-08-20",
     "tag": "GSuite",

@@ -22,7 +22,7 @@ Unicode true
 ## !define INFO_PROJECTNAME    "my-project" # Default "GSuite"
 ## !define INFO_COMPANYNAME    "My Company" # Default "MorenoLand"
 ## !define INFO_PRODUCTNAME    "My Product Name" # Default "GSuite"
-## !define INFO_PRODUCTVERSION "1.0.0"     # Default "0.1.84"
+## !define INFO_PRODUCTVERSION "1.0.0"     # Default "0.1.85"
 ## !define INFO_COPYRIGHT      "(c) Now, My Company" # Default "Copyright (c) MorenoLand"
 ###
 ## !define PRODUCT_EXECUTABLE  "Application.exe"      # Default "${INFO_PROJECTNAME}.exe"

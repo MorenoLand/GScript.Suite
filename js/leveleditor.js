@@ -24,6 +24,16 @@ function _fmtKB(b) {
 const _CNAMES = ['white','yellow','orange','pink','red','darkred','lightgreen','green','darkgreen','lightblue','blue','darkblue','brown','cynober','purple','darkpurple','lightgray','gray','black','transparent'];
 const _CRGB = [[255,255,255],[255,255,0],[255,173,107],[255,192,203],[255,0,0],[139,0,0],[144,238,144],[0,128,0],[0,100,0],[173,216,230],[0,0,255],[0,0,139],[139,69,19],[255,215,0],[128,0,128],[64,0,64],[211,211,211],[128,128,128],[0,0,0],[0,0,0]];
 const _BODY_PALETTE = [{r:255,g:255,b:255,slot:1},{r:255,g:173,b:107,slot:0},{r:255,g:0,b:0,slot:2},{r:206,g:24,b:41,slot:3},{r:0,g:0,b:255,slot:4},{r:0,g:132,b:0,slot:-1},{r:0,g:0,b:0,slot:-1}];
+function _drawPlayModeLabel(ctx, text, x, y, emboldenScale = 1) {
+    const transform = ctx.getTransform?.();
+    const screenScale = Math.max(Math.abs(transform?.a || 1), Math.abs(transform?.d || 1));
+    ctx.shadowColor = 'transparent'; ctx.shadowOffsetX = 0; ctx.shadowOffsetY = 0; ctx.shadowBlur = 0;
+    ctx.strokeStyle = ctx.fillStyle;
+    ctx.lineWidth = 2 * Math.max(0, Math.min(1, emboldenScale)) / screenScale;
+    ctx.strokeText(text, x, y);
+    ctx.shadowColor = 'rgba(20,40,200,1)'; ctx.shadowOffsetX = 2; ctx.shadowOffsetY = 2; ctx.shadowBlur = 0;
+    ctx.fillText(text, x, y);
+}
 const _CHARACTER_NPC_SCRIPT = `// NPC Created by Stefan Knorr
 function onCreated() {
     // Initialize the attributes
@@ -2248,9 +2258,9 @@ class LevelEditor {
             this.ctx.save();
             this.ctx.setTransform(1, 0, 0, 1, 0, 0);
             this.ctx.textAlign = 'center';
-            this.ctx.shadowColor = 'rgba(20,40,200,1)'; this.ctx.shadowOffsetX = 2; this.ctx.shadowOffsetY = 2; this.ctx.shadowBlur = 0;
             this.ctx.font = `bold ${_nickSz}px 'TempusSansITC','Tempus Sans ITC',sans-serif`;
-            this.ctx.fillStyle = '#fff'; this.ctx.fillText(p.nick + (p.guild ? ` (${p.guild})` : ''), (p.x + _sprCX) * this.zoom + this.panX, _feetY * this.zoom + this.panY + _nickSz - 6);
+            this.ctx.fillStyle = '#fff';
+            _drawPlayModeLabel(this.ctx, p.nick + (p.guild ? ` (${p.guild})` : ''), (p.x + _sprCX) * this.zoom + this.panX, _feetY * this.zoom + this.panY + _nickSz - 6, Math.min(1, this.zoom, _nickSz / Math.max(_gs.nickFontSize, 1)));
             this.ctx.restore();
         }
 
@@ -2416,10 +2426,10 @@ class LevelEditor {
             const _chatSz = Math.max(_gs.chatFontSize * this.zoom, 8);
             const _cx = (p.x + _sprCX) * this.zoom + this.panX;
             this.ctx.textAlign = 'center';
-            this.ctx.shadowColor = 'rgba(20,40,200,1)'; this.ctx.shadowOffsetX = 2; this.ctx.shadowOffsetY = 2; this.ctx.shadowBlur = 0;
             if (this._playerChat) {
                 this.ctx.font = `bold ${_chatSz}px 'TempusSansITC','Tempus Sans ITC',sans-serif`;
-                this.ctx.fillStyle = '#fff'; this.ctx.fillText(this._playerChat, _cx, _chatHeadY * this.zoom + this.panY - 16);
+                this.ctx.fillStyle = '#fff';
+                _drawPlayModeLabel(this.ctx, this._playerChat, _cx, _chatHeadY * this.zoom + this.panY - 16, Math.min(1, this.zoom, (_chatSz * this.zoom) / Math.max(_gs.chatFontSize, 1)));
             }
             this.ctx.shadowColor = 'transparent'; this.ctx.shadowOffsetX = 0; this.ctx.shadowOffsetY = 0; this.ctx.textAlign = 'left';
             const _tw = this.level.tileWidth || 16, _th = this.level.tileHeight || 16;
@@ -8003,7 +8013,6 @@ class LevelEditor {
             this.render();
             this.saveSessionDebounced();
         };
-        dialog.onclick = e => { if (e.target === dialog) close(); };
         const npcImgInput = box.querySelector('#npcImageInput');
         npcImgInput.addEventListener('focus', () => {
             if (!this.fileCache.images.size) return;

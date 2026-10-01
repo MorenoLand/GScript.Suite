@@ -14,7 +14,7 @@
     !define INFO_PRODUCTNAME "GSuite"
 !endif
 !ifndef INFO_PRODUCTVERSION
-    !define INFO_PRODUCTVERSION "0.1.84"
+    !define INFO_PRODUCTVERSION "0.1.85"
 !endif
 !ifndef INFO_COPYRIGHT
     !define INFO_COPYRIGHT "Copyright (c) MorenoLand"

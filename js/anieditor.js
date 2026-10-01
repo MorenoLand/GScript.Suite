@@ -7277,7 +7277,7 @@ async function initGaniEditorStartup() {
                     const reader = new FileReader();
                     reader.onload = (event) => {
                         const text = event.target.result;
-                        if (/[\x00-\x08\x0e-\x1f]/.test(text.substring(0, 256))) { showAlertDialog('Not a valid plain-text .gani file'); return; }
+                        if (/[\x00-\x08\x0e-\x1f]/.test(text.substring(0, 256))) { showAlertDialog('Not a valid gani file. (or is encrypted)'); return; }
                         const ani = parseGani(text);
                         if (ani) { ani.fileName = file.name; addTab(ani, ani.fileName); }
                     };
@@ -7354,7 +7354,7 @@ async function initGaniEditorStartup() {
             localStorage.setItem("ganiEditorLastOpenDir", lastOpenDirectory);
         }
         const text = await file.text();
-        if (/[\x00-\x08\x0e-\x1f]/.test(text.substring(0, 256))) { showAlertDialog(`${file.name} is not a valid plain-text .gani file (may be encrypted or binary).`); return; }
+        if (/[\x00-\x08\x0e-\x1f]/.test(text.substring(0, 256))) { showAlertDialog(`${file.name}: Not a valid gani file. (or is encrypted)`); return; }
         f12Log(`Opening file: ${file.name}`);
         const ani = parseGani(text);
         f12Log("Parsed animation, defaults: " + JSON.stringify(Array.from(ani.defaultImages.entries())));
@@ -7372,7 +7372,7 @@ async function initGaniEditorStartup() {
         let opened = 0;
         for (const file of files) {
             const text = await file.text();
-            if (/[\x00-\x08\x0e-\x1f]/.test(text.substring(0, 256))) { showAlertDialog(`${file.name} is not a valid plain-text .gani file (may be encrypted or binary).`); continue; }
+            if (/[\x00-\x08\x0e-\x1f]/.test(text.substring(0, 256))) { showAlertDialog(`${file.name}: Not a valid gani file. (or is encrypted)`); continue; }
             const ani = parseGani(text);
             ani.fileName = file.name;
             addTab(ani);
@@ -9021,7 +9021,7 @@ async function initGaniEditorStartup() {
                     const file = e.target.files[0];
                     if (!file) return;
                     const text = await file.text();
-                    if (/[\x00-\x08\x0e-\x1f]/.test(text.substring(0, 256))) { showAlertDialog(`${file.name} is not a valid plain-text .gani file (may be encrypted or binary).`); return; }
+                    if (/[\x00-\x08\x0e-\x1f]/.test(text.substring(0, 256))) { showAlertDialog(`${file.name}: Not a valid gani file. (or is encrypted)`); return; }
                     f12Log(`Reloading file: ${file.name}`);
                     const ani = parseGani(text);
                     f12Log("Reloaded animation, defaults: " + JSON.stringify(Array.from(ani.defaultImages.entries())));
@@ -9501,7 +9501,7 @@ async function initGaniEditorStartup() {
             if (!selected) return;
             const text = await wailsReadTextFile(selected);
             const fname = selected.split(/[\\/]/).pop();
-            if (/[\x00-\x08\x0e-\x1f]/.test(text.substring(0, 256))) { showAlertDialog(`${fname} is not a valid plain-text .gani file`); return; }
+            if (/[\x00-\x08\x0e-\x1f]/.test(text.substring(0, 256))) { showAlertDialog(`${fname}: Not a valid gani file. (or is encrypted)`); return; }
             await doImportSprites(text, fname);
             return;
         }
@@ -9513,7 +9513,7 @@ async function initGaniEditorStartup() {
             if (!file) return;
             try {
                 const text = await file.text();
-                if (/[\x00-\x08\x0e-\x1f]/.test(text.substring(0, 256))) { showAlertDialog(`${file.name} is not a valid plain-text .gani file (may be encrypted or binary).`); return; }
+                if (/[\x00-\x08\x0e-\x1f]/.test(text.substring(0, 256))) { showAlertDialog(`${file.name}: Not a valid gani file. (or is encrypted)`); return; }
                 await doImportSprites(text, file.name);
             } catch (err) {
                 console.error("Import error:", err);
@@ -11912,7 +11912,6 @@ ${editableActions.map(a => kbRow(a.label, a.key)).join("")}
             out.style.color = '#f88';
             out.innerHTML = errs.map(e => `<div>Line ${e.startLine}: ${e.message}</div>`).join('');
         };
-        dialog.onclick = (e) => { if (e.target === dialog) { if (scriptEditorInstance) scriptEditorInstance.dispose(); document.body.removeChild(dialog); } };
     };
     $("btnAttachmentBack").onclick = () => {
         if (!editingSprite) return;
@@ -14601,10 +14600,12 @@ function showWorkspaceBrowserDialog() {
                 item.onclick=async()=>{
                     overlay.remove();
                     try {
-                        const text=await file.text();
-                        if (/[\x00-\x08\x0e-\x1f]/.test(text.substring(0, 256))) return;
+                        const text = _isWails && file.path ? await _wails.fs.readTextFile(file.path) : await file.text();
+                        if (!text || /[\x00-\x08\x0e-\x1f]/.test(text.substring(0, 256))) throw new Error('Not a valid gani file. (or is encrypted)');
                         const ani=parseGani(text);
+                        if (!ani) throw new Error('Not a valid gani file. (or is encrypted)');
                         ani.fileName=file.name;
+                        ani.fullPath=file.path || '';
                         addTab(ani,file.name);
                     } catch(err){showAlertDialog("Failed to open: "+err.message);}
                 };

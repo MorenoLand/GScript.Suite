@@ -39,6 +39,8 @@
 		<string>GSuite desktop editor</string>
 		<key>CFBundleIconFile</key>
 		<string>icons</string>
+		<key>CFBundleIconName</key>
+		<string>appicon</string>
 		<key>CFBundleIdentifier</key>
 		<string>com.morenoland.gsuite</string>
 		<key>CFBundleName</key>
@@ -46,9 +48,9 @@
 		<key>CFBundlePackageType</key>
 		<string>APPL</string>
 		<key>CFBundleShortVersionString</key>
-		<string>0.1.84</string>
+		<string>0.1.85</string>
 		<key>CFBundleVersion</key>
-		<string>0.1.84</string>
+		<string>0.1.85</string>
 		<key>LSMinimumSystemVersion</key>
 		<string>12.0.0</string>
 		<key>NSHighResolutionCapable</key>
