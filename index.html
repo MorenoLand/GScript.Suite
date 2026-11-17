@@ -24,6 +24,7 @@
 <script src="js/tabmanager.js"></script>
 <script src="js/tiletypes.js"></script>
 <script src="js/mnglib.js"></script>
+<script src="js/terrain.js"></script>
 <script src="js/gmonaco.js"></script>
 <script src="js/particleexport.js"></script>
 <script src="js/particleapng.js"></script>
@@ -1380,7 +1381,7 @@
                                 <input type="text" id="spriteID" readonly>
                                 <label>Source:</label>
                                 <select id="spriteSource">
-                                    <option>CUSTOM</option><option>SPRITES</option><option>BODY</option><option>HEAD</option><option>SWORD</option><option>SHIELD</option><option>HORSE</option><option>PICS</option><option>ATTR1</option><option>ATTR2</option><option>ATTR3</option><option>ATTR4</option><option>ATTR5</option><option>ATTR6</option><option>ATTR7</option><option>ATTR8</option><option>ATTR9</option><option>ATTR10</option><option>PARAM1</option><option>PARAM2</option><option>PARAM3</option><option>PARAM4</option><option>PARAM5</option><option>PARAM6</option><option>PARAM7</option><option>PARAM8</option><option>PARAM9</option><option>PARAM10</option>
+                                    <option>CUSTOM</option><option>SPRITES</option><option>BODY</option><option>HEAD</option><option>SWORD</option><option>SHIELD</option><option>HORSE</option><option>PICS</option><option>ATTR1</option><option>ATTR2</option><option>ATTR3</option><option>ATTR4</option><option>ATTR5</option><option>ATTR6</option><option>ATTR7</option><option>ATTR8</option><option>ATTR9</option><option>ATTR10</option><option>ATTR11</option><option>ATTR12</option><option>ATTR13</option><option>ATTR14</option><option>ATTR15</option><option>ATTR16</option><option>ATTR17</option><option>ATTR18</option><option>ATTR19</option><option>PARAM1</option><option>PARAM2</option><option>PARAM3</option><option>PARAM4</option><option>PARAM5</option><option>PARAM6</option><option>PARAM7</option><option>PARAM8</option><option>PARAM9</option><option>PARAM10</option>
                                 </select>
                                 <label style="margin-top:10px;">Image:</label>
                                 <input type="text" id="spriteImage">
@@ -1409,9 +1410,10 @@
                                 <label>Mode:</label>
                                 <select id="spriteMode" style="width:100%;">
                                     <option value="" selected>Simple (Off)</option>
-                                    <option value="0">Lights (0)</option>
+                                    <option value="0">Add (0)</option>
                                     <option value="1">Transparency (1)</option>
-                                    <option value="2">Blacklight (2)</option>
+                                    <option value="2">Subtract (2)</option>
+                                    <option value="3">Daynight (3)</option>
                                 </select>
                                 <label>Rect:</label>
                                 <div style="display:grid;grid-template-columns:auto 1fr;gap:4px 8px;align-items:center;">
@@ -1481,6 +1483,10 @@
                         <label style="display:flex;align-items:center;gap:8px;"><span id="singleDirCheckbox" class="custom-checkbox"> </span> Single Dir</label>
                         <label style="display:flex;align-items:center;gap:8px;"><span id="loopedCheckbox" class="custom-checkbox">✓</span> Looped</label>
                         <label style="display:flex;align-items:center;gap:8px;"><span id="continousCheckbox" class="custom-checkbox">✓</span> Continuous</label>
+                        <label style="display:flex;align-items:center;gap:8px;"><span id="antialiasCheckbox" class="custom-checkbox"> </span> Antialias</label>
+                        <label style="display:flex;align-items:center;gap:8px;"><span id="rotateProjectileCheckbox" class="custom-checkbox"> </span> Rotate Projectile</label>
+                        <label>Layer:</label>
+                        <input type="number" id="aniLayer" value="0">
                         <label>Next Ani:</label>
                         <input type="text" id="nextAni">
                         <button id="btnDefaults" title="Defaults" style="width:100%;margin-bottom:8px;">Defaults ▶</button>
@@ -1670,6 +1676,7 @@
             <button id="btnDraw" title="Draw" class="tool-button"><i class="fas fa-pencil"></i></button>
             <button id="btnEraserTool" title="Eraser" class="tool-button"><i class="fas fa-eraser"></i></button>
             <button id="btnFillTool" title="Flood Fill" class="tool-button"><i class="fas fa-fill"></i></button>
+            <button id="btnTerrain" title="Terrain" class="tool-button"><i class="fas fa-mountain"></i></button>
             <div class="tb-sep"></div>
             <button id="btnEditLinks" title="Edit Links" class="tool-button"><i class="fas fa-link"></i></button>
             <button id="btnNewLink" title="Add Link at Selection" class="tool-button" disabled><i class="fas fa-link-plus"></i></button>
@@ -1797,12 +1804,15 @@
                                 <div class="tileset-toolbar-select">
                                     <select id="tilesetsCombo">
                                         <option value="pics1.png">pics1.png</option>
+                                        <option value="picso.png">picso.png</option>
+                                        <option value="picso2-sky.png">picso2-sky.png</option>
                                         <option value="zlttp_tiles_lightworld_day.png">zlttp_tiles_lightworld_day.png</option>
                                     </select>
                                 </div>
                             </div>
                             <div class="tileset-toolbar tileset-toolbar-row2">
                                 <select id="tilesetTypeCombo" title="Tileset Type (playmode)">
+                                    <option value="5">Type 5 (Terrain)</option>
                                     <option value="0">Type 0</option>
                                     <option value="1">Type 1</option>
                                 </select>

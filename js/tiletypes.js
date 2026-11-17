@@ -264,7 +264,8 @@ const TILE_TYPES = {
     22,22,22,22,22,22,22,22,22,22,22,22,22,22,22,22,22,22,22,22,22,22,22,22,22,22,22,22,22,22,22,22,
     22,22,22,22,22,22,22,22,22,22,22,22,22,22,22,22,22,22,22,22,22,22,22,22,22,22,22,22,22,22,22,22
   ]),
-  get(tileId, type = 0) { return (type ? this.TYPE1 : this.TYPE0)[tileId] || 0; },
+  TYPE5: new Uint8Array(512),
+  get(tileId, type = 0) { return (type === 5 ? this.TYPE5 : (type ? this.TYPE1 : this.TYPE0))[tileId] || 0; },
   isSolid(id, t) { return this.get(id, t) === 22; },
   isPassable(id, t) { const v = this.get(id, t); return v === 0 || v === 20 || v === 21; },
   isDamage(id, t) { const v = this.get(id, t); return v === 2 || v === 7 || v === 12; },

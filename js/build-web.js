@@ -41,9 +41,16 @@ rm(dist);
 cp('runtime.js', 'wails/runtime.js');
 cp('frontend/bindings', 'bindings');
 cpFiltered('fonts', 'fonts', f => /MesloLGS/i.test(f));
-const monacoSource = path.join(root, 'node_modules', 'monaco-editor', 'min', 'vs');
+let monacoSource = path.join(root, 'node_modules', 'monaco-editor', 'min', 'vs');
+if (!fs.existsSync(monacoSource)) {
+    const pnpm = path.join(root, 'node_modules', '.pnpm');
+    if (fs.existsSync(pnpm)) for (const entry of fs.readdirSync(pnpm).filter(name => name.startsWith('monaco-editor@'))) {
+        const candidate = path.join(pnpm, entry, 'node_modules', 'monaco-editor', 'min', 'vs');
+        if (fs.existsSync(candidate)) { monacoSource = candidate; break; }
+    }
+}
 if (!fs.existsSync(monacoSource)) throw new Error('Monaco editor assets are missing; run pnpm install before building');
-cpFiltered('node_modules/monaco-editor/min/vs', 'monaco-editor/min/vs', f => /nls\.messages\..*\.js$/i.test(f));
+cpFiltered(path.relative(root, monacoSource), 'monaco-editor/min/vs', f => /nls\.messages\..*\.js$/i.test(f));
 
 const levelsDir = path.join(root, 'levels');
 const levelFiles = fs.readdirSync(levelsDir).filter(f => /\.(nw|zelda|graal|gmap)$/i.test(f));

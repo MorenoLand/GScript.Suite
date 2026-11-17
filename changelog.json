@@ -1,5 +1,38 @@
 [
   {
+    "version": "0.1.86",
+    "date": "2026-11-10",
+    "tag": "GSuite",
+    "changes": [
+      "Particle Emulator supports advancetime(seconds), removemodifiers(), removeparticles() and isfrozen, and exposes emittedparticles and currentparticlecount",
+      "Particle Emulator reads addemitmodifier(...) as the modifier that changes the particle types",
+      "Particle Emulator plays a particle type's sound list when a particle is made and supports movementvector, text and polygon particle types",
+      "Particle Emulator ends particles that reach the ground when checkbelowterrain is on, with or without a drop emitter, as the client does",
+      "Added particle emulator tests (npm test)",
+      "Gani editor reads and writes the client's full gani grammar: LAYER, ANTIALIAS, ROTATEPROJECTILE, FRAMES, SINGLEDIRECTION, six-field SPRITE lines, PLAYSOUND defaults, space-separated pieces and independent zoom/stretch effects",
+      "Gani editor saves movie keys as the client reads them: raw values with quoted commas, visible/layer defaults and per-key attribute lookup",
+      "Gani movie preview supports CHAR, SPRITE, SOUND and TEXT tracks, text fonts/colors/zoom/styles, sub-gani WAIT timing, movie-length looping and first-key sound playback",
+      "Gani editor applies additive/transparency/subtract/daynight modes, alpha, attachment order and piece transforms when drawing sprites",
+      "Gani frames play their sounds on the WAIT tick the client uses and keep that tick through a save",
+      "Gani editor can add, delete and navigate movie keys, choose actor kind, sprite number, sound file and text style, and marks item keys on the timeline",
+      "Gani editor edits LAYER, ANTIALIAS, ROTATEPROJECTILE and the full ATTR/PARAM default set",
+      "Added gani editor tests (npm test)",
+      "Level editor supports full gmap terrain: GENSEED, GENBASE, GENHEIGHT, GENCHAOS, GENEVENBORDERS, LEVHEIGHT, LEVCHAOS, HEIGHTMAP, RANDOMSEEDS and per-level 9x9 HEIGHTS overrides",
+      "Terrain height controls are edited directly on the canvas every 8 samples, with seam mirroring, whole-number right-drag snapping and a corner-heightmap editor",
+      "Terrain rendering warps each 16x16 tile column by column with height-band tile selection, hillshade and water shading, cached per member",
+      "Added picso.png and picso2-sky.png and made gmap terrain use the gmap or member TILESET, including picso",
+      "Gmap saves keep all three tile layers and no longer fabricate blank levels for unresolved members",
+      "NW HEIGHTS blocks and GR-V1.04 terrain heights round-trip",
+      "Added terrain tests (npm test)",
+      "Level editor selection, object placement and tile previews follow the terrain surface, and play mode follows terrain height, water and swimming",
+      "Terrain gmaps load binary .graal member levels through the working directory, including their NPCs and NPC scripts",
+      "Gmap GENERATED level names are supported, so terrain maps such as offlinetutorial.gmap open without a LEVELNAMES section",
+      "Tileset type 5 is exposed as Terrain and used by terrain gmaps; type 0/1 remain the normal tilesets",
+      "Player and NPC names, chat and carried items stay attached to the terrain surface",
+      "Terrain panel can raise or lower the whole terrain and edit the corner heightmap"
+    ]
+  },
+  {
     "version": "0.1.85",
     "date": "2026-09-11",
     "tag": "GSuite",

@@ -1,6 +1,6 @@
-# GScript Editor Suite
+# A web-based editor suite for animations and levels
 
-A web-based editor suite for Graal files. Includes a Gani animation editor (.gani) and a level editor (.nw), merged into a single interface. Built on Stefan/39sters level editor work. Work in progress.
+Includes a Gani animation editor (.gani) and a level editor (.nw), merged into a single interface. Built on Stefan/39sters level editor work. Work in progress.
 
 ![GSuite](https://raw.githubusercontent.com/MorenoLand/GScript.GSuite/refs/heads/master/gsuite.png)
 

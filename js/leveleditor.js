@@ -299,6 +299,7 @@ class Level {
         this.tilesetType = 0;
         this.tileWidth = 16;
         this.tileHeight = 16;
+        this.heights = null;
 
         this.layers.push(this.createEmptyLayer());
     }
@@ -449,6 +450,11 @@ class Level {
             }
         }
         if (this.tilesetName) out += `TILESET ${this.tilesetName}${this.tilesetType ? ` ${this.tilesetType}` : ''}\n`;
+        if (this.heights) {
+            out += 'HEIGHTS\n';
+            for (let row = 0; row < 9; row++) out += this.heights.slice(row * 9, row * 9 + 9).map(value => Math.abs(value) < 0.0001 ? '0' : String(value)).join(',') + '\n';
+            out += 'HEIGHTSEND\n';
+        }
         return out;
     }
 
@@ -511,6 +517,15 @@ class Level {
                 code = code.replace(/\n+$/, '');
                 obj.properties = { image: words[1] === '-' ? '' : words[1], layerIndex: words[4] ? parseInt(words[4]) : 0, code };
                 level.addObject(obj);
+            } else if (cmd === 'HEIGHTS') {
+                const heights = new Array(81).fill(0);
+                let row = 0;
+                while (++i < lines.length && lines[i].trim() !== 'HEIGHTSEND' && row < 9) {
+                    const values = lines[i].replace(/,/g, ' ').trim().split(/\s+/).filter(Boolean);
+                    for (let column = 0; column < 9 && column < values.length; column++) heights[row * 9 + column] = parseFloat(values[column]) || 0;
+                    row++;
+                }
+                level.heights = heights;
             }
         }
         return level;
@@ -522,9 +537,9 @@ class Level {
         const header = String.fromCharCode(...data.slice(0, 8));
         const isZelda = header.startsWith('Z3'), isGraal = header.startsWith('GR');
         if (!isZelda && !isGraal) return null;
-        const bits = (header === 'GR-V1.02' || header === 'GR-V1.03') ? 13 : 12;
+        const bits = (header === 'GR-V1.02' || header === 'GR-V1.03' || header === 'GR-V1.04') ? 13 : 12;
         const controlBit = bits === 12 ? 0x800 : 0x1000;
-        const hasNPCs = isGraal, hasChests = header === 'GR-V1.02' || header === 'GR-V1.03';
+        const hasNPCs = isGraal, hasChests = header === 'GR-V1.02' || header === 'GR-V1.03' || header === 'GR-V1.04';
         const level = new Level(64, 64);
         level._sourceFormat = isZelda ? 'zelda' : 'graal';
         const TROW = 128;
@@ -578,7 +593,20 @@ class Level {
             }
         }
         while (pos < data.length) {
-            const line = readLine(); if (!line || line.length < 2) continue;
+            const line = readLine();
+            if (line.trim() === "HEIGHTS") {
+                const heights = new Array(81).fill(0);
+                let row = 0;
+                while (pos < data.length && row < 9) {
+                    const values = readLine().replace(/,/g, ' ').trim().split(/\s+/).filter(Boolean);
+                    if (values[0] === "HEIGHTSEND") break;
+                    for (let column = 0; column < 9 && column < values.length; column++) heights[row * 9 + column] = parseFloat(values[column]) || 0;
+                    row++;
+                }
+                level.heights = heights;
+                break;
+            }
+            if (!line || line.length < 2) continue;
             const obj = new LevelObject(line.charCodeAt(0) - 32, line.charCodeAt(1) - 32, 'sign');
             obj.properties = { text: _decodeSign(line.substring(2)) }; level.addObject(obj);
         }
@@ -586,7 +614,7 @@ class Level {
     }
 
     saveToGraal(isZelda = false) {
-        const header = isZelda ? 'Z3-V1.04' : 'GR-V1.03';
+        const header = isZelda ? 'Z3-V1.04' : (this.heights ? 'GR-V1.04' : 'GR-V1.03');
         const bits = isZelda ? 12 : 13, hasNPCs = !isZelda, hasChests = !isZelda;
         const TROW = 128;
         const result = [...header].map(c => c.charCodeAt(0));
@@ -612,6 +640,11 @@ class Level {
             result.push(0x23, 0x0A);
         }
         for (const obj of this.objects.filter(o => o.type === 'sign')) { pushStr(`${String.fromCharCode(32+Math.floor(obj.x))}${String.fromCharCode(32+Math.floor(obj.y))}${_encodeSign(obj.properties?.text||'')}\n`); }
+        if (this.heights && !isZelda) {
+            pushStr('\nHEIGHTS\n');
+            for (let row = 0; row < 9; row++) pushStr(this.heights.slice(row * 9, row * 9 + 9).map(value => Math.abs(value) < 0.0001 ? '0' : String(value)).join(',') + '\n');
+            pushStr('HEIGHTSEND\n');
+        }
         return new Uint8Array(result);
     }
 }
@@ -728,6 +761,14 @@ class LevelEditor {
         this.draggingNewObjectX = 0;
         this.draggingNewObjectY = 0;
         this.newTabCounter = 0;
+        this.terrainEdit = false;
+        this.terrainPreview = true;
+        this._terrainDrag = null;
+        this._terrainRevision = 0;
+        this._terrainMemberCache = new Map();
+        this._terrainTilesetData = null;
+        this._terrainTilesetSource = null;
+        this._terrainDialog = null;
 
         this.init();
     }
@@ -1055,6 +1096,8 @@ class LevelEditor {
         if (btnFill) btnFill.addEventListener('click', () => { this.floodFillEnabled = !this.floodFillEnabled; if (this.floodFillEnabled) this.setTool('draw'); btnFill.classList.toggle('active', this.floodFillEnabled); });
         const btnEraser = this.$('btnEraserTool');
         if (btnEraser) btnEraser.addEventListener('click', () => this.setTool('eraser'));
+        const btnTerrain = this.$('btnTerrain');
+        if (btnTerrain) btnTerrain.addEventListener('click', () => this.openTerrainDialog());
         const btnSelect = this.$('btnSelect');
         if (btnSelect) btnSelect.addEventListener('click', () => { this.objectMode = false; this.setTool('select'); });
         const btnCloseAll = this.$('btnCloseAll');
@@ -1321,6 +1364,13 @@ class LevelEditor {
     handleMouseDown(e) {
         if (!this.level) return;
         if (this._playMode && !this._editBypass) return;
+        if (this.terrainEdit) {
+            if (e.button === 0 || e.button === 2) { this._beginTerrainDrag(e); e.preventDefault(); }
+            return;
+        }
+        if (!this._playMode && (e.button === 0 || e.button === 2) && this._terrainControlAt(e)) {
+            this._beginTerrainDrag(e); e.preventDefault(); return;
+        }
         const coords = this.getCanvasCoords(e);
         if (this._linkPickMode && e.button === 0) {
             const tw = this.level.tileWidth || 16, th = this.level.tileHeight || 16;
@@ -1616,6 +1666,7 @@ class LevelEditor {
 
     handleMouseMove(e) {
         if (!this.level) return;
+        if (this._terrainDrag) { this._updateTerrainDrag(e); e.preventDefault(); return; }
         if (this._linkPickMode && this._linkPickDrag) {
             const coords = this.getCanvasCoords(e);
             const tw = this.level.tileWidth || 16, th = this.level.tileHeight || 16;
@@ -1827,6 +1878,7 @@ class LevelEditor {
 
     handleMouseUp(e) {
         if (!this.level) return;
+        if (this._terrainDrag) { this._endTerrainDrag(); e.preventDefault(); return; }
         if (this._linkPickMode && this._linkPickDrag && e.button === 0) {
             const d = this._linkPickDrag;
             this._linkPickDrag = null;
@@ -2064,14 +2116,25 @@ class LevelEditor {
     }
 
     _captureSnapshot() {
+        const entry = this._currentLevelEntry();
         return {
             layers: this.level.layers.map(l => [...l.tiles]),
-            objects: this.level.objects.map(o => ({ x: o.x, y: o.y, type: o.type, id: o.id, properties: JSON.parse(JSON.stringify(o.properties)) }))
+            objects: this.level.objects.map(o => ({ x: o.x, y: o.y, type: o.type, id: o.id, properties: JSON.parse(JSON.stringify(o.properties)) })),
+            terrain: entry?.terrain ? {text: entry.terrain.saveText(), name: entry.name} : null
         };
     }
 
     _restoreSnapshot(snap) {
         this.invalidateLayerCache();
+        if (snap.terrain && this._currentLevelEntry() && window.GraalTerrain?.TerrainMap) {
+            try {
+                const entry = this._currentLevelEntry();
+                entry.terrain = window.GraalTerrain.TerrainMap.parse(snap.terrain.text);
+                entry.gmapText = snap.terrain.text;
+                entry.terrainApplied = !!entry.terrain?.hasTerrainData;
+                this.invalidateTerrainCache();
+            } catch (error) { console.warn('[terrain undo]', error.message); }
+        }
         for (let i = 0; i < snap.layers.length; i++) this.level.layers[i].tiles = snap.layers[i];
         this.level.objects = snap.objects.map(d => { const o = new LevelObject(d.x, d.y, d.type); o.id = d.id; o.properties = d.properties; return o; });
         this.syncObjectSelection();
@@ -2161,7 +2224,25 @@ class LevelEditor {
         const tileHeight = this.level.tileHeight || 16;
         const px = (e.clientX - rect.left) * scaleX;
         const py = (e.clientY - rect.top) * scaleY;
-        return { x: Math.floor((px - Math.floor(this.panX)) / (tileWidth * this.zoom)), y: Math.floor((py - Math.floor(this.panY)) / (tileHeight * this.zoom)) };
+        const worldX = (px - Math.floor(this.panX)) / (tileWidth * this.zoom);
+        const projectedY = (py - Math.floor(this.panY)) / (tileHeight * this.zoom);
+        const terrain = this._terrainForCurrentLevel();
+        const worldY = terrain ? this._terrainTileYAt(worldX, projectedY, terrain) : projectedY;
+        return { x: Math.floor(worldX), y: Math.floor(worldY) };
+    }
+
+    _terrainTileYAt(worldX, projectedY, terrain) {
+        if (!terrain) return projectedY;
+        const maxY = terrain.height * 64;
+        const start = Math.max(0, Math.floor(projectedY - terrain.maximumHeight - 2));
+        const end = Math.min(maxY, Math.ceil(projectedY - terrain.minimumHeight + 2));
+        for (let row = start; row < end; row++) {
+            const topHeight = terrain.sampleGlobalInterpolated(worldX, row);
+            const bottomHeight = terrain.sampleGlobalInterpolated(worldX, row + 1);
+            const top = row - topHeight, bottom = row + 1 - bottomHeight;
+            if (projectedY <= bottom && top < projectedY) return Math.abs(bottom - top) < 0.0001 ? row : row + (projectedY - top) / (bottom - top);
+        }
+        return projectedY;
     }
 
     getCanvasCoordsRaw(e) {
@@ -2236,7 +2317,9 @@ class LevelEditor {
         this.ctx.translate(snapPanX, snapPanY);
         this.ctx.scale(this.zoom, this.zoom);
 
-        for (let layer = 0; layer < this.level.layers.length; layer++) {
+        const terrain = this.terrainPreview ? this._terrainForCurrentLevel() : null;
+        if (terrain && this.level.layers[0]?.visible) this.drawTerrain(terrain);
+        for (let layer = terrain ? 1 : 0; layer < this.level.layers.length; layer++) {
             const layerVisible = this.level.layers[layer].visible;
             if (!layerVisible && !this.fadeInactiveLayers) continue;
             this.ctx.globalAlpha = (this.fadeInactiveLayers && !layerVisible) ? 0.33 : 1.0;
@@ -2254,7 +2337,7 @@ class LevelEditor {
             const p = this._player, _gs = this._getSettings();
             const _nickSz = Math.max(_gs.nickFontSize * this.zoom, 8);
             const _sprCX = (p._ganiOX ?? 0) + (p._imgW ?? 0) / 2;
-            const _feetY = p.y + (p._ganiOY ?? 0) + (p._imgH ?? 48);
+            const _feetY = p.y + (p._ganiOY ?? 0) + (p._imgH ?? 48) - this._terrainOffsetAtPixels(p.x + (p._ganiOX ?? 0) + (p._imgW ?? 16) / 2, p.y + (p._ganiOY ?? 0) + (p._imgH ?? 48));
             this.ctx.save();
             this.ctx.setTransform(1, 0, 0, 1, 0, 0);
             this.ctx.textAlign = 'center';
@@ -2265,6 +2348,7 @@ class LevelEditor {
         }
 
         this.drawObjects();
+        if (!this._playMode) this.drawTerrainControls(this._terrainForCurrentLevel());
 
         if (this.selectionStartX >= 0 && this.selectionEndX >= 0) {
             this.drawSelection({ fill: !this._floatingStamp });
@@ -2327,14 +2411,15 @@ class LevelEditor {
             this.ctx.translate(Math.round(this.panX), Math.round(this.panY));
             this.ctx.scale(this.zoom, this.zoom);
             const _sprCX = (p._ganiOX ?? 0) + (p._imgW ?? 0) / 2;
-            const _chatHeadY = p.y + (p._ganiOY ?? 0);
-            const _chatFeetY = p.y + (p._ganiOY ?? 0) + (p._imgH ?? 48);
+            const _playerTerrainOffset = this._terrainOffsetAtPixels(p.x + (p._ganiOX ?? 0) + (p._imgW ?? 16) / 2, p.y + (p._ganiOY ?? 0) + (p._imgH ?? 48));
+            const _chatHeadY = p.y + (p._ganiOY ?? 0) - _playerTerrainOffset;
+            const _chatFeetY = p.y + (p._ganiOY ?? 0) + (p._imgH ?? 48) - _playerTerrainOffset;
             if (this._showColDebug) {
                 const _tw2 = this.level.tileWidth || 16, _th2 = this.level.tileHeight || 16;
                 const _tsetW = this.level.tilesetImage?.width || 2048;
                 const _tpr = Math.max(1, Math.floor(_tsetW / _tw2));
                 const _ttType = this.level.tilesetType || 0;
-                const _ttTable = _ttType ? TILE_TYPES.TYPE1 : TILE_TYPES.TYPE0;
+                const _ttTable = _ttType === 5 ? TILE_TYPES.TYPE5 : (_ttType ? TILE_TYPES.TYPE1 : TILE_TYPES.TYPE0);
                 const visX0 = Math.floor((-this.panX / this.zoom) / _tw2) - 1;
                 const visY0 = Math.floor((-this.panY / this.zoom) / _th2) - 1;
                 const visX1 = visX0 + Math.ceil(this.canvas.width / this.zoom / _tw2) + 2;
@@ -2758,9 +2843,10 @@ class LevelEditor {
             { x: startX, y: my,     type: 'w' },
             { x: ex1,    y: my,     type: 'e' }
         ];
+        const terrain = this._terrainForCurrentLevel();
         for (const handle of handles) {
             const handleCanvasX = handle.x * tileWidth * this.zoom + this.panX;
-            const handleCanvasY = handle.y * tileHeight * this.zoom + this.panY;
+            const handleCanvasY = (handle.y * tileHeight - (terrain ? terrain.sampleGlobalInterpolated(handle.x, handle.y) * tileHeight : 0)) * this.zoom + this.panY;
             const mouseCanvasX = (x - rect.left) * (this.canvas.width / rect.width);
             const mouseCanvasY = (y - rect.top) * (this.canvas.height / rect.height);
             const distX = Math.abs(mouseCanvasX - handleCanvasX);
@@ -2886,6 +2972,31 @@ class LevelEditor {
         const endX = Math.max(this.selectionStartX, this.selectionEndX);
         const endY = Math.max(this.selectionStartY, this.selectionEndY);
         const tw = this.level.tileWidth || 16, th = this.level.tileHeight || 16;
+        const terrain = this._terrainForCurrentLevel();
+        if (terrain) {
+            const points = this._terrainSelectionPoints(startX, startY, endX, endY, terrain, tw, th);
+            this.ctx.save();
+            this.ctx.beginPath();
+            this.ctx.moveTo(points[0].x, points[0].y);
+            for (let index = 1; index < points.length; index++) this.ctx.lineTo(points[index].x, points[index].y);
+            this.ctx.closePath();
+            if (fill) { this.ctx.fillStyle = 'rgba(255, 105, 180, 0.25)'; this.ctx.fill(); }
+            this.ctx.strokeStyle = 'rgb(255, 105, 180)';
+            this.ctx.lineWidth = 1.5 / this.zoom;
+            this.ctx.stroke();
+            if (this.currentTool === 'select' || this._floatingStamp) {
+                const hs = Math.max(3, 5 / this.zoom);
+                const mx = (startX + endX + 1) / 2, my = (startY + endY + 1) / 2;
+                const handles = [[startX,startY],[mx,startY],[endX+1,startY],[endX+1,my],[endX+1,endY+1],[mx,endY+1],[startX,endY+1],[startX,my]];
+                for (const [hx,hy] of handles) {
+                    const px = hx * tw, py = hy * th - terrain.sampleGlobalInterpolated(hx, hy) * th;
+                    this.ctx.fillStyle = '#ffffff'; this.ctx.strokeStyle = 'rgb(255,105,180)'; this.ctx.lineWidth = 1 / this.zoom;
+                    this.ctx.fillRect(px - hs/2, py - hs/2, hs, hs); this.ctx.strokeRect(px - hs/2, py - hs/2, hs, hs);
+                }
+            }
+            this.ctx.restore();
+            return;
+        }
         const x = startX * tw, y = startY * th;
         const w = (endX - startX + 1) * tw, h = (endY - startY + 1) * th;
         if (fill) {
@@ -2907,6 +3018,16 @@ class LevelEditor {
         }
     }
 
+    _terrainSelectionPoints(startX, startY, endX, endY, terrain, tw, th) {
+        const points = [];
+        const point = (x, y) => ({x: x * tw, y: y * th - terrain.sampleGlobalInterpolated(x, y) * th});
+        for (let x = startX; x <= endX + 1; x++) points.push(point(x, startY));
+        for (let y = startY + 1; y <= endY + 1; y++) points.push(point(endX + 1, y));
+        for (let x = endX; x >= startX; x--) points.push(point(x, endY + 1));
+        for (let y = endY; y >= startY + 1; y--) points.push(point(startX, y));
+        return points;
+    }
+
     drawMovingSelection() {
         if (!this.selectionTiles || !this.level.tilesetImage) return;
         const startX = Math.min(this.selectionStartX, this.selectionEndX);
@@ -2914,6 +3035,8 @@ class LevelEditor {
         const tileWidth = this.level.tileWidth || 16;
         const tileHeight = this.level.tileHeight || 16;
         const tilesPerRow = Math.floor(this.level.tilesetImage.width / tileWidth);
+        const terrain = this._terrainForCurrentLevel();
+        const terrainOffset = (x, y) => terrain ? terrain.sampleGlobal(x + 0.5, y + 0.5) * tileHeight : 0;
         if (this.isResizingSelection) {
             const origStartX = Math.min(this.resizeStartSelectionX, this.resizeStartSelectionEndX);
             const origStartY = Math.min(this.resizeStartSelectionY, this.resizeStartSelectionEndY);
@@ -2927,7 +3050,7 @@ class LevelEditor {
                     this.ctx.drawImage(
                         this.level.tilesetImage,
                         fillTileX, fillTileY, tileWidth, tileHeight,
-                        x * tileWidth, y * tileHeight, tileWidth, tileHeight
+                        x * tileWidth, y * tileHeight - terrainOffset(x, y), tileWidth, tileHeight
                     );
                 }
             }
@@ -2940,7 +3063,7 @@ class LevelEditor {
                     const tileX = (tileIndex % tilesPerRow) * tileWidth;
                     const tileY = Math.floor(tileIndex / tilesPerRow) * tileHeight;
                     const destX = (startX + x) * tileWidth;
-                    const destY = (startY + y) * tileHeight;
+                    const destY = (startY + y) * tileHeight - terrainOffset(startX + x, startY + y);
                     this.ctx.drawImage(
                         this.level.tilesetImage,
                         tileX, tileY, tileWidth, tileHeight,
@@ -2974,6 +3097,7 @@ class LevelEditor {
             const worldY = (mouseY - snapPanY) / this.zoom;
             const tileDrawX = Math.floor(worldX / tileWidth) * tileWidth;
             const tileDrawY = Math.floor(worldY / tileHeight) * tileHeight;
+            const terrain = this._terrainForCurrentLevel();
             for (let y = 0; y < selHeight; y++) {
                 for (let x = 0; x < selWidth; x++) {
                     if (this.selectedTilesetTiles[y] && this.selectedTilesetTiles[y][x] !== undefined && this.selectedTilesetTiles[y][x] >= 0) {
@@ -2981,7 +3105,7 @@ class LevelEditor {
                         const tileX = (tileIndex % tilesPerRow) * tileWidth;
                         const tileY = Math.floor(tileIndex / tilesPerRow) * tileHeight;
                         const destX = tileDrawX + x * tileWidth;
-                        const destY = tileDrawY + y * tileHeight;
+                        const destY = tileDrawY + y * tileHeight - (terrain ? terrain.sampleGlobal((tileDrawX / tileWidth) + x + 0.5, (tileDrawY / tileHeight) + y + 0.5) * tileHeight : 0);
                         this.ctx.drawImage(
                             this.level.tilesetImage,
                             tileX, tileY, tileWidth, tileHeight,
@@ -3013,6 +3137,388 @@ class LevelEditor {
 
     invalidateLayerCache() {
         this._layerCache = null;
+        this.invalidateTerrainCache();
+    }
+
+    invalidateTerrainCache() {
+        this._terrainRevision = (this._terrainRevision || 0) + 1;
+        this._terrainMemberCache?.clear();
+        this._terrainTilesetData = null;
+        this._terrainTilesetSource = null;
+    }
+
+    _currentLevelEntry() {
+        return this.levels[this.currentLevelIndex] || null;
+    }
+
+    _terrainForCurrentLevel() {
+        const entry = this._currentLevelEntry();
+        return entry?.terrain?.loaded && entry.terrain.hasTerrainData ? entry.terrain : null;
+    }
+
+    _terrainOffsetAtPixels(x, y) {
+        const terrain = this._terrainForCurrentLevel();
+        if (!terrain) return 0;
+        const tw = this.level.tileWidth || 16;
+        return terrain.sampleGlobalInterpolated(x / tw, y / tw) * tw;
+    }
+
+    _terrainTileset() {
+        const image = this.level?.tilesetImage;
+        if (!image) return null;
+        if (this._terrainTilesetData && this._terrainTilesetSource === image) return this._terrainTilesetData;
+        const width = image.naturalWidth || image.width, height = image.naturalHeight || image.height;
+        if (!width || !height) return null;
+        const canvas = document.createElement('canvas');
+        canvas.width = width; canvas.height = height;
+        const context = canvas.getContext('2d', {willReadFrequently: true});
+        context.drawImage(image, 0, 0);
+        this._terrainTilesetSource = image;
+        this._terrainTilesetData = {data: context.getImageData(0, 0, width, height).data, width, height};
+        return this._terrainTilesetData;
+    }
+
+    _terrainWord(tileIndex) {
+        const index = Math.max(0, tileIndex | 0);
+        return Math.floor((index % 128) / 16) * 512 + (index % 16) + Math.floor(index / 128) * 16;
+    }
+
+    _terrainTileSource(word, corners, tileX, tileY) {
+        const thresholds = [0, 3, 4, 5, 25, 55, 65];
+        const offsets = [[7, 8], [0, 0], [2, 0], [1, 0], [0, 2], [0, 1], [3, 0], [4, 2], [2, 2], [4, 0], [2, 1], [3, 2], [1, 2], [4, 1], [3, 1], [1, 1]];
+        let sourceX = (((word >> 9) << 4) + (word & 15)) * 16;
+        let sourceY = ((word >> 4) & 31) * 16;
+        let matched = sourceX !== 0 || sourceY !== 0, variant = false;
+        for (let band = thresholds.length - 1; band >= 0 && !matched; band--) {
+            let mask = 0;
+            if (corners[3] >= thresholds[band]) mask |= 1;
+            if (corners[2] >= thresholds[band]) mask |= 2;
+            if (corners[1] >= thresholds[band]) mask |= 4;
+            if (corners[0] >= thresholds[band]) mask |= 8;
+            if (mask > 14) { sourceX = ((band + 1) >> 1) * 256; sourceY = ((band + 1) & 1) * 256; matched = true; variant = true; }
+            else if (mask !== 0) { sourceX = (band >> 1) * 256 + 128 + offsets[mask][0] * 16; sourceY = (band & 1) * 256 + offsets[mask][1] * 16; matched = true; }
+        }
+        if (!matched) variant = true;
+        if (variant) {
+            const sum = corners[0] + corners[1] + corners[2] + corners[3];
+            const rounded = Math.floor(sum + 0.0001), helper = Math.max(0, sum - rounded);
+            let r = Math.floor(helper * 1000 + 0.0001) & 0x800000ff;
+            if ((r | 0) < 0) r = (((r - 1) | 0xffffff00) + 1) >>> 0;
+            if (r < 0x3f) { sourceX += ((r + 1) & 7) * 16; sourceY += ((r + 1) >> 3) * 16; }
+            else { sourceX += (tileX & 3) << 4; sourceY += 0x40 + (tileY & 3) * 16; }
+        }
+        return {x: sourceX, y: sourceY};
+    }
+
+    _terrainMemberCanvas(memberX, memberY, terrain) {
+        const key = `${memberX}:${memberY}:${this._terrainRevision}`;
+        if (this._terrainMemberCache.has(key)) return this._terrainMemberCache.get(key);
+        const tileset = this._terrainTileset();
+        if (!tileset || !this.level?.tilesetImage) return null;
+        const topShift = Math.ceil(Math.max(0, terrain.maximumHeight) * 16);
+        const bottomExtra = Math.ceil(Math.max(0, -terrain.minimumHeight) * 16) + 1;
+        const width = 64 * 16, height = 64 * 16 + topShift + bottomExtra;
+        const pixels = new Uint8ClampedArray(width * height * 4);
+        const clampByte = value => value < 0 ? 0 : value > 255 ? 255 : value;
+        for (let tileY = 0; tileY < 64; tileY++) {
+            for (let tileX = 0; tileX < 64; tileX++) {
+                const worldX = memberX * 64 + tileX, worldY = memberY * 64 + tileY;
+                if (worldX >= this.level.width || worldY >= this.level.height) continue;
+                const tileIndex = this.level.getTile(0, worldX, worldY);
+                const corners = terrain.getCorners(memberX, memberY, tileX, tileY);
+                const source = this._terrainTileSource(this._terrainWord(tileIndex < 0 ? 0 : tileIndex), corners, tileX, tileY);
+                const waterSource = {x: source.x & 0xff, y: (source.y & 0xff) + 0x30};
+                const hasWater = corners[0] < 0 || corners[1] < 0 || corners[2] < 0 || corners[3] < 0;
+                const allWater = corners[0] < 0 && corners[1] < 0 && corners[2] < 0 && corners[3] < 0;
+                const verticalA = Math.floor(corners[0] * 384 + 0.0001), verticalB = Math.floor(corners[1] * 384 + 0.0001);
+                const verticalC = Math.floor(corners[2] * 384 + 0.0001), verticalD = Math.floor(corners[3] * 384 + 0.0001);
+                const sample = (sx, sy) => terrain.sampleGlobalInterpolated(sx, sy);
+                const gradient0 = Math.floor((sample(worldX, worldY + 1) - sample(worldX, worldY - 1)) * 512 + 0.0001);
+                const gradient1 = Math.floor((sample(worldX + 1, worldY + 2) - sample(worldX + 1, worldY)) * 512 + 0.0001);
+                const gradient2 = Math.floor((sample(worldX, worldY + 2) - sample(worldX, worldY)) * 512 + 0.0001);
+                const gradient3 = Math.floor((sample(worldX + 1, worldY + 1) - sample(worldX + 1, worldY - 1)) * 512 + 0.0001);
+                const originY = topShift + tileY * 16;
+                let columnStart = originY - corners[0] * 16, columnEnd = originY + 16 - corners[2] * 16;
+                for (let column = 0; column < 16; column++) {
+                    const first = Math.max(0, Math.floor(columnStart + 0.0001));
+                    const last = Math.min(height, Math.floor(columnEnd + 0.0001));
+                    const span = columnEnd - columnStart;
+                    const step = span === 0 ? 256 : Math.floor(16 / span * 256 + 0.0001);
+                    let accumulator = (columnStart < 0 ? Math.floor(-columnStart + 0.0001) : 0) * step;
+                    for (let destinationY = first; destinationY < last; destinationY++) {
+                        const sourceRow = accumulator >> 8;
+                        if (sourceRow >= 0 && sourceRow < 16) {
+                            const leftWater = verticalA + (((verticalC - verticalA) * sourceRow) >> 4);
+                            const rightWater = verticalB + (((verticalD - verticalB) * sourceRow) >> 4);
+                            const waterPlane = leftWater + (((rightWater - leftWater) * column) >> 4);
+                            const waterPixel = hasWater && waterPlane < 0;
+                            const gradientTop = gradient0 + (((gradient2 - gradient0) * sourceRow) >> 4);
+                            const gradientBottom = gradient3 + (((gradient1 - gradient3) * sourceRow) >> 4);
+                            const normalShade = Math.max(0, Math.min(0x3f, ((gradientTop + (((gradientBottom - gradientTop) * column) >> 4)) >> 4) + 0x20));
+                            const used = waterPixel && !allWater ? waterSource : source;
+                            const pixelX = used.x + column, pixelY = used.y + sourceRow;
+                            if (pixelX >= 0 && pixelY >= 0 && pixelX < tileset.width && pixelY < tileset.height) {
+                                const offset = (pixelY * tileset.width + pixelX) * 4;
+                                let red = tileset.data[offset], green = tileset.data[offset + 1], blue = tileset.data[offset + 2];
+                                if (waterPixel) {
+                                    const delta = -waterPlane;
+                                    let waterShade = delta >= 0xc00 ? 0xc0 : ((delta >> 4) & 0xff);
+                                    if (delta < 0x180) waterShade = (delta >> 5) + waterShade - 0xc0;
+                                    red = clampByte(red - waterShade); green = clampByte(green - waterShade);
+                                    blue = waterShade < -0xf ? 0xff : clampByte(0xf0 - waterShade);
+                                } else {
+                                    red = clampByte(red - normalShade); green = clampByte(green - normalShade); blue = clampByte(blue - normalShade);
+                                }
+                                const destination = (destinationY * width + tileX * 16 + column) * 4;
+                                pixels[destination] = red; pixels[destination + 1] = green; pixels[destination + 2] = blue; pixels[destination + 3] = 0xff;
+                            }
+                        }
+                        accumulator += step;
+                    }
+                    columnStart += corners[0] - corners[1];
+                    columnEnd += corners[2] - corners[3];
+                }
+            }
+        }
+        const canvas = document.createElement('canvas');
+        canvas.width = width; canvas.height = height;
+        canvas.getContext('2d').putImageData(new ImageData(pixels, width, height), 0, 0);
+        const result = {canvas, topShift};
+        this._terrainMemberCache.set(key, result);
+        return result;
+    }
+
+    drawTerrain(terrain) {
+        if (!terrain || !this.level?.tilesetImage) return;
+        const visibleLeft = (-this.panX / this.zoom), visibleTop = (-this.panY / this.zoom);
+        const visibleRight = visibleLeft + this.canvas.width / this.zoom, visibleBottom = visibleTop + this.canvas.height / this.zoom;
+        for (let memberY = 0; memberY < terrain.height; memberY++) {
+            for (let memberX = 0; memberX < terrain.width; memberX++) {
+                const originX = memberX * 1024, originY = memberY * 1024;
+                const reach = Math.ceil(Math.max(Math.abs(terrain.minimumHeight), Math.abs(terrain.maximumHeight)) * 16) + 32;
+                if (originX + 1024 < visibleLeft || originX > visibleRight || originY + 1024 + reach < visibleTop || originY - reach > visibleBottom) continue;
+                const member = this._terrainMemberCanvas(memberX, memberY, terrain);
+                if (member) this.ctx.drawImage(member.canvas, originX, originY - member.topShift);
+            }
+        }
+    }
+
+    drawTerrainControls(terrain) {
+        if (!terrain) return;
+        const step = 8;
+        const maxX = terrain.width * 64, maxY = terrain.height * 64;
+        const worldLeft = -this.panX / this.zoom, worldTop = -this.panY / this.zoom;
+        const worldRight = worldLeft + this.canvas.width / this.zoom, worldBottom = worldTop + this.canvas.height / this.zoom;
+        const radius = 3.5 / this.zoom, font = 10 / this.zoom;
+        this.ctx.save();
+        this.ctx.font = `${font}px monospace`;
+        this.ctx.textAlign = 'center';
+        this.ctx.textBaseline = 'bottom';
+        for (let x = 0; x <= maxX; x += step) {
+            for (let y = 0; y <= maxY; y += step) {
+                const height = terrain.sampleGlobal(x, y);
+                const px = x * 16, py = y * 16 - Math.max(0, height) * 16;
+                if (px < worldLeft - 32 || px > worldRight + 32 || py < worldTop - 32 || py > worldBottom + 32) continue;
+                const selected = this._terrainDrag && this._terrainDrag.x === x && this._terrainDrag.y === y;
+                this.ctx.beginPath();
+                this.ctx.arc(px, py, radius, 0, Math.PI * 2);
+                this.ctx.fillStyle = selected ? '#ffffff' : '#ffd400';
+                this.ctx.fill();
+                this.ctx.lineWidth = 1 / this.zoom;
+                this.ctx.strokeStyle = '#1a1a1a';
+                this.ctx.stroke();
+                if (this.zoom >= 0.5) {
+                    this.ctx.fillStyle = '#ffd400';
+                    this.ctx.fillText(height.toFixed(2), px, py - radius - 2 / this.zoom);
+                }
+            }
+        }
+        this.ctx.restore();
+    }
+
+    _terrainControlAt(event) {
+        const entry = this._currentLevelEntry();
+        const terrain = entry?.terrain;
+        if (!terrain?.loaded || !entry.gmapGrid || !this.level) return null;
+        const {rect, scaleX, scaleY} = this._canvasRect();
+        const px = (event.clientX - rect.left) * scaleX, py = (event.clientY - rect.top) * scaleY;
+        const worldX = (px - Math.floor(this.panX)) / this.zoom / 16;
+        const projectedY = (py - Math.floor(this.panY)) / this.zoom / 16;
+        const maxX = terrain.width * 64, maxY = terrain.height * 64;
+        let worldY = projectedY;
+        for (let row = 0; row < maxY; row++) {
+            const topHeight = Math.max(0, terrain.sampleGlobalInterpolated(worldX, row));
+            const bottomHeight = Math.max(0, terrain.sampleGlobalInterpolated(worldX, row + 1));
+            const top = row - topHeight, bottom = row + 1 - bottomHeight;
+            if (projectedY <= bottom && top < projectedY) { worldY = Math.abs(bottom - top) < 0.0001 ? row : row + (projectedY - top) / (bottom - top); break; }
+        }
+        const sampleX = Math.floor(worldX + 0.5001), sampleY = Math.floor(worldY + 0.5001);
+        if (sampleX < 0 || sampleY < 0 || sampleX > maxX || sampleY > maxY || sampleX % 8 !== 0 || sampleY % 8 !== 0) return null;
+        return {x: sampleX, y: sampleY};
+    }
+
+    _beginTerrainDrag(event) {
+        const control = this._terrainControlAt(event);
+        if (!control) return false;
+        const terrain = this._terrainForCurrentLevel();
+        if (!terrain) return false;
+        this.pushUndo();
+        this._terrainDrag = {...control, startClientY: event.clientY, startHeight: terrain.sampleGlobal(control.x, control.y), button: event.button};
+        this.canvas.style.cursor = 'ns-resize';
+        this.requestRender();
+        return true;
+    }
+
+    _updateTerrainDrag(event) {
+        if (!this._terrainDrag) return false;
+        const terrain = this._terrainForCurrentLevel();
+        if (!terrain) return false;
+        let height = this._terrainDrag.startHeight + (this._terrainDrag.startClientY - event.clientY) / (16 * this.zoom);
+        if (this._terrainDrag.button === 2 || (event.buttons & 2)) height = Math.floor(height + 0.0001);
+        if (terrain.setHeightSpot(this._terrainDrag.x, this._terrainDrag.y, height)) {
+            const entry = this._currentLevelEntry();
+            if (entry) { entry.gmapText = terrain.saveText(); entry.modified = true; entry.terrainApplied = true; }
+            this.invalidateTerrainCache();
+            this.requestRender();
+            this.saveSessionDebounced();
+        }
+        return true;
+    }
+
+    _endTerrainDrag() {
+        if (!this._terrainDrag) return false;
+        this._terrainDrag = null;
+        this.canvas.style.cursor = '';
+        this.requestRender();
+        this.saveSessionDebounced();
+        return true;
+    }
+
+    openTerrainDialog() {
+        const entry = this._currentLevelEntry();
+        if (!entry?.gmapGrid) { alert('Terrain editing is available for .gmap worlds.'); return; }
+        const TerrainMap = window.GraalTerrain?.TerrainMap;
+        if (!TerrainMap) { alert('Terrain module is not loaded.'); return; }
+        if (!entry.terrain) { try { entry.terrain = TerrainMap.parse(entry.gmapText); } catch (error) { alert('Terrain: ' + error.message); return; } }
+        if (!entry.terrain) { alert('Terrain: the gmap could not be read.'); return; }
+        if (this._terrainDialog) this._terrainDialog.remove();
+        const dialog = document.createElement('div');
+        dialog.className = 'ed-dialog-box';
+        dialog.style.cssText = 'position:fixed;top:50%;left:50%;transform:translate(-50%,-50%);background:#2b2b2b;border:1px solid #404040;padding:14px 16px;z-index:99999;width:560px;max-width:94vw;max-height:90vh;overflow:auto;color:#e0e0e0;font-size:13px;';
+        const terrain = entry.terrain;
+        const field = (label, id, value, step = 'any') => '<label style="display:flex;justify-content:space-between;gap:8px;margin:3px 0;"><span>' + label + '</span><input id="' + id + '" type="number" step="' + step + '" value="' + value + '" style="width:150px;"></label>';
+        dialog.innerHTML = `
+            <div class="ed-dlg-title" style="font-weight:bold;margin-bottom:10px;">Terrain: ${entry.name}</div>
+            <label style="display:flex;align-items:center;gap:8px;margin-bottom:8px;"><input type="checkbox" id="_terrainPreview" ${this.terrainPreview ? 'checked' : ''}> Preview terrain in canvas</label>
+            <div style="display:grid;grid-template-columns:1fr 1fr;gap:0 16px;">
+                ${field('Seed', '_terrainSeed', terrain.mapSeed, '1')}
+                ${field('Base height', '_terrainBase', terrain.baseHeight)}
+                ${field('Map height', '_terrainMapHeight', terrain.mapHeight)}
+                ${field('Map chaos', '_terrainMapChaos', terrain.mapChaos)}
+                ${field('Level height', '_terrainLevelHeight', terrain.levelHeight)}
+                ${field('Level chaos', '_terrainLevelChaos', terrain.levelChaos)}
+            </div>
+            <label style="display:flex;align-items:center;gap:8px;margin:4px 0 10px;"><input type="checkbox" id="_terrainEven" ${terrain.evenBorders ? 'checked' : ''}> Even borders</label>
+            <div style="display:flex;gap:6px;flex-wrap:wrap;margin-bottom:10px;">
+                <button id="_terrainGenerate">Generate Map</button>
+                <button id="_terrainRegenerate">Regenerate Levels</button>
+                <button id="_terrainRaise">Raise All</button>
+                <button id="_terrainLower">Lower All</button>
+                <button id="_terrainClear">Clear Overrides</button>
+                <button id="_terrainEdit">${this.terrainEdit ? 'Stop Height Edit' : 'Edit Height Controls'}</button>
+            </div>
+            <div style="font-size:11px;color:#b0b0b0;margin-bottom:4px;">Map controls (${terrain.width + 1} × ${terrain.height + 1})</div>
+            <canvas id="_terrainHeightMap" width="520" height="240" style="width:100%;height:240px;border:1px solid #404040;background:#111;image-rendering:pixelated;cursor:crosshair;"></canvas>
+            <div style="display:flex;gap:6px;align-items:center;margin-top:8px;">
+                <span style="font-size:11px;">Selected control:</span>
+                <input id="_terrainValue" type="number" step="any" style="width:120px;">
+                <button id="_terrainApply">Apply</button>
+                <span id="_terrainSelected" style="font-size:11px;color:#b0b0b0;"></span>
+            </div>
+            <div style="font-size:11px;color:#b0b0b0;margin-top:8px;">Drag a control vertically to change it; drag the map above to edit the corner heightmap. Right-drag height controls snaps to whole numbers.</div>
+            <div style="display:flex;justify-content:flex-end;margin-top:12px;"><button id="_terrainClose">Close</button></div>`;
+        document.body.appendChild(dialog);
+        this._terrainDialog = dialog;
+        dialog._closeModal = () => { this._terrainDialog = null; dialog.remove(); };
+        const $id = id => dialog.querySelector('#' + id);
+        $id('_terrainClose').onclick = dialog._closeModal;
+        $id('_terrainPreview').onchange = (event) => { this.terrainPreview = event.target.checked; this.render(); };
+        const syncText = () => {
+            entry.gmapText = terrain.saveText();
+            entry.modified = true;
+            entry.terrainApplied = terrain.hasTerrainData;
+            this.invalidateTerrainCache();
+            this.render();
+            this.saveSessionDebounced();
+        };
+        const readSettings = () => ({
+            mapSeed: $id('_terrainSeed').value,
+            baseHeight: $id('_terrainBase').value,
+            evenBorders: $id('_terrainEven').checked,
+            mapHeight: $id('_terrainMapHeight').value,
+            mapChaos: $id('_terrainMapChaos').value,
+            levelHeight: $id('_terrainLevelHeight').value,
+            levelChaos: $id('_terrainLevelChaos').value
+        });
+        $id('_terrainGenerate').onclick = () => { terrain.setSettings(readSettings()); terrain.regenerate(true); syncText(); drawHeightMap(); };
+        $id('_terrainRegenerate').onclick = () => { terrain.setSettings(readSettings()); terrain.regenerate(false); syncText(); drawHeightMap(); };
+        $id('_terrainRaise').onclick = () => { terrain.shiftAll(1); syncText(); drawHeightMap(); };
+        $id('_terrainLower').onclick = () => { terrain.shiftAll(-1); syncText(); drawHeightMap(); };
+        $id('_terrainClear').onclick = () => { terrain.clearOverrides(); syncText(); drawHeightMap(); };
+        $id('_terrainEdit').onclick = () => { this.terrainEdit = !this.terrainEdit; this.canvas.style.cursor = this.terrainEdit ? 'ns-resize' : ''; this.render(); dialog._closeModal(); };
+        $id('_terrainApply').onclick = () => { if (!selectedControl) return; const value = Number($id('_terrainValue').value); if (!Number.isFinite(value)) return; terrain.setMapControl(selectedControl.x, selectedControl.y, value); syncText(); drawHeightMap(); };
+        let selectedControl = null;
+        let mapDrag = null;
+        const canvas = $id('_terrainHeightMap');
+        const context = canvas.getContext('2d');
+        const drawHeightMap = () => {
+            const width = terrain.width + 1, height = terrain.height + 1;
+            const values = terrain.heightMap.length ? terrain.heightMap : new Array(width * height).fill(0);
+            let minimum = Infinity, maximum = -Infinity;
+            for (const value of values) { minimum = Math.min(minimum, value); maximum = Math.max(maximum, value); }
+            if (minimum === maximum) { minimum -= 1; maximum += 1; }
+            const cellW = canvas.width / width, cellH = canvas.height / height;
+            for (let y = 0; y < height; y++) for (let x = 0; x < width; x++) {
+                const t = (values[y * width + x] - minimum) / (maximum - minimum);
+                const r = Math.round(255 * Math.min(1, Math.max(0, 1.5 - Math.abs(t - 0.75) * 4)));
+                const g = Math.round(255 * Math.min(1, Math.max(0, 1.5 - Math.abs(t - 0.5) * 4)));
+                const b = Math.round(255 * Math.min(1, Math.max(0, 1.5 - Math.abs(t - 0.25) * 4)));
+                context.fillStyle = `rgb(${r},${g},${b})`;
+                context.fillRect(x * cellW, y * cellH, Math.ceil(cellW), Math.ceil(cellH));
+            }
+            context.strokeStyle = 'rgba(0,0,0,0.35)';
+            context.lineWidth = 1;
+            for (let x = 0; x <= width; x++) { context.beginPath(); context.moveTo(x * cellW, 0); context.lineTo(x * cellW, canvas.height); context.stroke(); }
+            for (let y = 0; y <= height; y++) { context.beginPath(); context.moveTo(0, y * cellH); context.lineTo(canvas.width, y * cellH); context.stroke(); }
+            if (selectedControl) { context.strokeStyle = '#fff'; context.lineWidth = 2; context.strokeRect(selectedControl.x * cellW, selectedControl.y * cellH, cellW, cellH); }
+        };
+        const pickControl = (event) => {
+            const rect = canvas.getBoundingClientRect();
+            const x = Math.floor((event.clientX - rect.left) / rect.width * (terrain.width + 1));
+            const y = Math.floor((event.clientY - rect.top) / rect.height * (terrain.height + 1));
+            if (x < 0 || y < 0 || x > terrain.width || y > terrain.height) return null;
+            return {x, y};
+        };
+        canvas.onmousedown = (event) => {
+            const control = pickControl(event);
+            if (!control) return;
+            selectedControl = control;
+            $id('_terrainValue').value = terrain.heightMap[control.y * (terrain.width + 1) + control.x] || 0;
+            $id('_terrainSelected').textContent = `${control.x}, ${control.y}`;
+            mapDrag = {control, startY: event.clientY, startValue: terrain.heightMap[control.y * (terrain.width + 1) + control.x] || 0};
+            drawHeightMap();
+        };
+        canvas.onmousemove = (event) => {
+            if (!mapDrag) return;
+            const value = mapDrag.startValue + (mapDrag.startY - event.clientY) / 8;
+            terrain.setMapControl(mapDrag.control.x, mapDrag.control.y, Math.round(value * 100) / 100);
+            $id('_terrainValue').value = terrain.heightMap[mapDrag.control.y * (terrain.width + 1) + mapDrag.control.x];
+            syncText();
+            drawHeightMap();
+        };
+        canvas.onmouseup = () => { mapDrag = null; };
+        canvas.onmouseleave = () => { mapDrag = null; };
+        drawHeightMap();
     }
 
     _getLayerCache(layerIndex) {
@@ -4511,7 +5017,7 @@ class LevelEditor {
         const tilesetType = this.level?.tilesetType || 0;
         const cacheKey = `${tilesetWidth}:${tw}:${tilesetType}`;
         if (this._tileTypeLookupCacheKey === cacheKey && this._tileTypeLookupCache) return this._tileTypeLookupCache;
-        const typeTable = tilesetType ? TILE_TYPES.TYPE1 : TILE_TYPES.TYPE0;
+        const typeTable = tilesetType === 5 ? TILE_TYPES.TYPE5 : (tilesetType ? TILE_TYPES.TYPE1 : TILE_TYPES.TYPE0);
         const tilesPerRow = Math.max(1, Math.floor(tilesetWidth / tw));
         const lookup = [];
         const tileCount = Math.max(typeTable.length, tilesPerRow * Math.ceil(typeTable.length / 16));
@@ -5144,7 +5650,7 @@ class LevelEditor {
         const tx = Math.floor(wx / tw), ty = Math.floor(wy / th);
         if (tx < 0 || ty < 0 || tx >= this.level.width || ty >= this.level.height) return 22;
         const tpr = Math.max(1, Math.floor((this.level.tilesetImage?.width || 2048) / tw));
-        const ttTable = (this.level.tilesetType || 0) ? TILE_TYPES.TYPE1 : TILE_TYPES.TYPE0;
+        const ttTable = (this.level.tilesetType || 0) === 5 ? TILE_TYPES.TYPE5 : ((this.level.tilesetType || 0) ? TILE_TYPES.TYPE1 : TILE_TYPES.TYPE0);
         for (let layer = 0; layer < this.level.layers.length; layer++) {
             const idx = this.level.getTile(layer, tx, ty);
             if (idx < 0) continue;
@@ -5510,7 +6016,10 @@ class LevelEditor {
         const moving = dx !== 0 || dy !== 0; p._isMoving = moving;
         let walkedIntoSomething = false;
         const moveCX = p.x + (p._ganiOX ?? 0) + (p._imgW ?? tw) / 2, moveCY = p.y + (p._ganiOY ?? 0) + (p._imgH ?? 48) - 16;
-        const moveSurface = this._getTileType(moveCX, moveCY), moveSpeed = moveSurface === 3 ? 0.3 : moveSurface === 11 ? 0.6 : 1;
+        const moveSurface = this._getTileType(moveCX, moveCY);
+        const terrain = this._terrainForCurrentLevel();
+        const moveTerrainWater = terrain ? terrain.sampleGlobalInterpolated(moveCX / tw, moveCY / th) < 0 : false;
+        const moveSpeed = terrain ? (moveTerrainWater ? 0.6 : 1) : (moveSurface === 3 ? 0.3 : moveSurface === 11 ? 0.6 : 1);
         if (moving && !p._attacking && !(p._liftTimer > 0) && !(p._freezeTimer > 0)) {
             const len = Math.sqrt(dx*dx + dy*dy);
             const speed = p.speed * moveSpeed * (p._hidden ? 0.55 : 1), mx = (dx/len) * speed * dt, my = (dy/len) * speed * dt;
@@ -5549,8 +6058,10 @@ class LevelEditor {
         const pushing = !!p._pushActive;
         const _scx = p.x + (p._ganiOX ?? 0) + (p._imgW ?? 32) / 2, _scy = p.y + (p._ganiOY ?? 0) + (p._imgH ?? 48) - 16;
         const surfaceType = this._getTileType(_scx, _scy);
-        if (p._carrying && (surfaceType === 3 || surfaceType === 11)) this._throwPlayObject();
-        const sitting = surfaceType === 3, swimming = surfaceType === 11;
+        const terrainHeight = terrain ? terrain.sampleGlobalInterpolated(_scx / tw, _scy / th) : 0;
+        if (p._carrying && (surfaceType === 3 || surfaceType === 11 || (terrain && terrainHeight < 0))) this._throwPlayObject();
+        const sitting = !terrain && surfaceType === 3, swimming = terrain ? terrainHeight < 0 : surfaceType === 11;
+        p._swimming = swimming;
         if (!p._attacking) {
             const _pG2 = this._playerSettings?.ganis||{};
             const nextGani = p._liftTimer > 0 ? 'lift.gani' : (swimming ? 'swim.gani' : (p._hidden ? (_pG2.idle||'idle.gani') : (p._carrying ? (moving ? 'carry.gani' : 'carrystill.gani') : (_pulling ? (_pG2.pull||'pull.gani') : (sitting ? (_pG2.sit||'sit.gani') : pushing ? (_pG2.push||'push.gani') : (moving ? (_pG2.walk||'walk.gani') : (_pG2.idle||'idle.gani')))))));
@@ -5607,8 +6118,9 @@ class LevelEditor {
         }
         const _camCX = p.x + (p._ganiOX ?? 0) + (p._imgW ?? 32) / 2;
         const _camCY = p.y + (p._ganiOY ?? 0) + (p._imgH ?? 48) / 2;
+        const _camTerrain = terrain ? terrain.sampleGlobalInterpolated(_camCX / tw, _camCY / th) * th : 0;
         this.panX = this.canvas.width / 2 - _camCX * this.zoom;
-        this.panY = this.canvas.height / 2 - _camCY * this.zoom;
+        this.panY = this.canvas.height / 2 - (_camCY - _camTerrain) * this.zoom;
     }
 
     _triggerLink(props) {
@@ -5735,19 +6247,44 @@ class LevelEditor {
 
     parseGmap(text) {
         const lines = text.split('\n').map(l => l.trim());
-        let tilesetName = 'pics1.png', width = 0, height = 0;
+        let tilesetName = 'pics1.png', width = 0, height = 0, generated = '';
         const grid = [];
         for (let i = 1; i < lines.length; i++) {
             const words = lines[i].split(' ');
             if (words[0] === 'TILESET' && words[1]) tilesetName = words[1];
             else if (words[0] === 'WIDTH') width = parseInt(words[1]);
             else if (words[0] === 'HEIGHT') height = parseInt(words[1]);
+            else if (words[0] === 'GENERATED' && words[1]) generated = words.slice(1).join(' ');
             else if (words[0] === 'LEVELNAMES') {
                 for (++i; i < lines.length && lines[i] !== 'LEVELNAMESEND'; ++i)
                     grid.push(lines[i].split(',').map(s => s.trim().replace(/^"|"$/g, '')));
             }
         }
-        return { tilesetName, width, height, grid };
+        if (!grid.length && generated && width > 0 && height > 0) {
+            const dot = generated.lastIndexOf('.');
+            const suffix = dot >= 0 ? generated.slice(dot) : '';
+            const base = dot >= 0 ? generated.slice(0, dot) : generated;
+            const underscore = base.indexOf('_');
+            if (underscore >= 0) {
+                const prefix = base.slice(0, underscore);
+                for (let row = 0; row < height; row++) {
+                    const names = [];
+                    for (let column = 0; column < width; column++) names.push(this._gmapLevelName(prefix, suffix, column, row, width, height));
+                    grid.push(names);
+                }
+            }
+        }
+        return { tilesetName, width, height, grid, generated };
+    }
+
+    _gmapLevelName(prefix, suffix, column, row, width, height) {
+        const tens = Math.floor(column / 26);
+        let letters = String.fromCharCode(97 + (column - tens * 26));
+        if (width >= 26) letters = String.fromCharCode(97 + (tens % 26)) + letters;
+        let number = String(row + 1);
+        if (height >= 10 && number.length < 2) number = '0' + number;
+        if (height >= 100 && number.length < 3) number = '0' + number;
+        return `${prefix}_${letters}-${number}${suffix}`;
     }
 
     _buildGmapEntry(text, filename, levelsOverride) {
@@ -5755,19 +6292,33 @@ class LevelEditor {
         if (!grid.length) return null;
         const gridH = grid.length, gridW = Math.max(...grid.map(r => r.length));
         const merged = new Level(gridW * 64, gridH * 64);
+        while (merged.layers.length < 3) merged.layers.push(merged.createEmptyLayer());
         merged.tilesetName = tilesetName;
         merged.tilesetImage = this.level?.tilesetImage || null;
+        let terrain = null;
+        try { terrain = window.GraalTerrain?.TerrainMap?.parse(text) || null; } catch (error) { console.warn('[gmap terrain]', error.message); }
+        if (terrain?.hasTerrainData) {
+            merged.tilesetType = 5;
+            if (!/^\s*TILESET\s/m.test(text)) merged.tilesetName = 'picso.png';
+        }
         const usedLevels = {};
+        const usedObjects = {};
+        const usedHeights = {};
         const _lvlByBasename = name => { const bn = name.toLowerCase(); for (const [k, v] of this.fileCache.levels) { if (k.toLowerCase().endsWith('\\' + bn) || k.toLowerCase().endsWith('/' + bn)) return v; } return null; };
+        const _objByBasename = name => { const bn = name.toLowerCase(); for (const [k, v] of this.fileCache.levelObjects || []) { if (k.toLowerCase() === bn || k.toLowerCase().endsWith('\\' + bn) || k.toLowerCase().endsWith('/' + bn)) return v; } return null; };
         const getLevel = name => levelsOverride ? (typeof levelsOverride.get === 'function' ? levelsOverride.get(name) : (levelsOverride[name] ?? levelsOverride[`"${name}"`])) : (this.fileCache.levels.get(name) || this.fileCache.levels.get(name.toLowerCase()) || _lvlByBasename(name));
+        const getLevelObject = name => this.fileCache.levelObjects?.get(name) || this.fileCache.levelObjects?.get(name.toLowerCase()) || _objByBasename(name) || null;
         for (let cellY = 0; cellY < gridH; cellY++) {
             for (let cellX = 0; cellX < (grid[cellY]?.length || 0); cellX++) {
                 const levelName = grid[cellY][cellX];
                 if (!levelName) continue;
                 const nwText = getLevel(levelName);
-                if (!nwText) continue;
-                usedLevels[levelName] = nwText;
-                const sub = Level.loadFromNW(nwText);
+                const levelObject = nwText ? null : getLevelObject(levelName);
+                if (!nwText && !levelObject) continue;
+                if (nwText) usedLevels[levelName] = nwText;
+                else usedObjects[levelName] = levelObject;
+                const sub = nwText ? Level.loadFromNW(nwText) : levelObject;
+                if (sub.heights) usedHeights[levelName] = [...sub.heights];
                 for (let layer = 0; layer < 3; layer++)
                     for (let ty = 0; ty < 64; ty++)
                         for (let tx = 0; tx < 64; tx++) {
@@ -5781,7 +6332,7 @@ class LevelEditor {
                 }
             }
         }
-        return { level: merged, name: filename, modified: false, gmapText: text, gmapLevels: usedLevels, gmapGrid: grid };
+        return { level: merged, name: filename, modified: false, gmapText: text, gmapLevels: usedLevels, gmapObjects: usedObjects, gmapHeights: usedHeights, gmapGrid: grid, terrain, terrainApplied: !!terrain?.hasTerrainData, fullPath: '' };
     }
 
     async _refillGmapEntries() {
@@ -5792,26 +6343,30 @@ class LevelEditor {
             const grid = entry.gmapGrid;
             const missing = [];
             for (const row of grid) for (const name of row) {
-                if (!name || entry.gmapLevels?.[name]) continue;
-                const key = name.toLowerCase().endsWith('.nw') ? name.toLowerCase() : name.toLowerCase() + '.nw';
-                const inFileCache = this.fileCache.levels.has(key);
+                if (!name || entry.gmapLevels?.[name] || entry.gmapObjects?.[name]) continue;
+                const key = name.toLowerCase();
+                const inFileCache = this.fileCache.levels.has(key) || this.fileCache.levelObjects?.has(name) || this.fileCache.levelObjects?.has(key);
                 const inPathIndex = this._wailsPathIndex.has(key);
                 if (!inFileCache && inPathIndex) missing.push([name, key]);
             }
             if (!missing.length) continue;
-            await Promise.all(missing.map(([, key]) =>
-                _wails.fs.readTextFile(this._wailsPathIndex.get(key)).then(t => this.fileCache.levels.set(key, t)).catch(() => {})
-            ));
+            await Promise.all(missing.map(([name, key]) => {
+                const ext = name.split('.').pop().toLowerCase();
+                if (ext === 'graal' || ext === 'zelda') return _wails.fs.readFile(this._wailsPathIndex.get(key)).then(buf => { const lvl = Level.loadFromGraal(buf.buffer || buf); if (lvl) { this.fileCache.levelObjects = this.fileCache.levelObjects || new Map(); this.fileCache.levelObjects.set(name, lvl); } }).catch(() => {});
+                return _wails.fs.readTextFile(this._wailsPathIndex.get(key)).then(t => this.fileCache.levels.set(key, t)).catch(() => {});
+            }));
             for (let cy = 0; cy < grid.length; cy++) {
                 for (let cx = 0; cx < (grid[cy]?.length || 0); cx++) {
                     const name = grid[cy][cx];
-                    if (!name || entry.gmapLevels?.[name]) continue;
-                    const key = name.toLowerCase().endsWith('.nw') ? name.toLowerCase() : name.toLowerCase() + '.nw';
-                    const nwText = this.fileCache.levels.get(key);
-                    if (!nwText) continue;
-                    if (!entry.gmapLevels) entry.gmapLevels = {};
-                    entry.gmapLevels[name] = nwText;
-                    const sub = Level.loadFromNW(nwText);
+                    if (!name || entry.gmapLevels?.[name] || entry.gmapObjects?.[name]) continue;
+                    const key = name.toLowerCase();
+                    const nwText = this.fileCache.levels.get(key) || this.fileCache.levels.get(name);
+                    const levelObject = nwText ? null : (this.fileCache.levelObjects?.get(name) || this.fileCache.levelObjects?.get(key));
+                    if (!nwText && !levelObject) continue;
+                    if (nwText) { if (!entry.gmapLevels) entry.gmapLevels = {}; entry.gmapLevels[name] = nwText; }
+                    else { if (!entry.gmapObjects) entry.gmapObjects = {}; entry.gmapObjects[name] = levelObject; }
+                    const sub = nwText ? Level.loadFromNW(nwText) : levelObject;
+                    if (sub.heights) { entry.gmapHeights ??= {}; entry.gmapHeights[name] = [...sub.heights]; }
                     const lv = entry.level;
                     for (let layer = 0; layer < 3; layer++)
                         for (let ty = 0; ty < 64; ty++)
@@ -5829,14 +6384,20 @@ class LevelEditor {
     }
 
     _serializeGmapEntry(entry) {
+        if (entry.terrain) entry.gmapText = entry.terrain.saveText();
         const updatedLevels = {};
+        const updatedBuffers = {};
         const grid = entry.gmapGrid;
         const lv = entry.level;
         for (let cellY = 0; cellY < grid.length; cellY++) {
             for (let cellX = 0; cellX < (grid[cellY]?.length || 0); cellX++) {
                 const name = grid[cellY][cellX].replace(/^"|"$/g, '');
-                if (!name) continue;
+                const hasText = Object.prototype.hasOwnProperty.call(entry.gmapLevels || {}, name);
+                const hasObject = Object.prototype.hasOwnProperty.call(entry.gmapObjects || {}, name);
+                if (!name || (!hasText && !hasObject)) continue;
                 const sub = new Level(64, 64);
+                while (sub.layers.length < 3) sub.layers.push(sub.createEmptyLayer());
+                if (entry.gmapHeights?.[name]) sub.heights = [...entry.gmapHeights[name]];
                 sub.tilesetName = lv.tilesetName;
                 sub.tilesetImage = lv.tilesetImage;
                 for (let layer = 0; layer < 3; layer++)
@@ -5851,10 +6412,11 @@ class LevelEditor {
                         sub.addObject(clone);
                     }
                 }
-                updatedLevels[name] = sub.saveToNW();
+                if (hasText) updatedLevels[name] = sub.saveToNW();
+                else updatedBuffers[name] = sub.saveToGraal(name.toLowerCase().endsWith('.zelda'));
             }
         }
-        return { gmap: entry.gmapText, gmapLevels: updatedLevels, gmapGrid: entry.gmapGrid, name: entry.name, tilesetName: lv.tilesetName || 'pics1.png', modified: entry.modified };
+        return { gmap: entry.gmapText, gmapLevels: updatedLevels, gmapBuffers: updatedBuffers, gmapHeights: entry.gmapHeights || {}, gmapGrid: entry.gmapGrid, name: entry.name, tilesetName: lv.tilesetName || 'pics1.png', modified: entry.modified, terrainApplied: entry.terrainApplied };
     }
 
     async openGmapText(text, filename, levelsOverride, filePath = null) {
@@ -5867,15 +6429,18 @@ class LevelEditor {
             const toLoad = [];
             for (const row of grid) for (const rawName of row) {
                 if (!rawName) continue;
-                const key = rawName.toLowerCase().endsWith('.nw') ? rawName.toLowerCase() : rawName.toLowerCase() + '.nw';
-                const localName = rawName.endsWith('.nw') ? rawName : rawName + '.nw';
-                const alreadyLoaded = this.fileCache.levels.has(key) || this.fileCache.levels.has(rawName.toLowerCase()) || [...this.fileCache.levels.keys()].some(k => k.toLowerCase().endsWith('\\' + key) || k.toLowerCase().endsWith('/' + key));
+                const hasExt = /\.(nw|graal|zelda)$/i.test(rawName);
+                const localName = hasExt ? rawName : rawName + '.nw';
+                const key = localName.toLowerCase();
+                const alreadyLoaded = this.fileCache.levels.has(key) || this.fileCache.levels.has(rawName.toLowerCase()) || this.fileCache.levelObjects?.has(rawName) || this.fileCache.levelObjects?.has(key) || [...this.fileCache.levels.keys()].some(k => k.toLowerCase().endsWith('\\' + key) || k.toLowerCase().endsWith('/' + key));
                 const path = alreadyLoaded ? null : (dir ? dir + sep + localName : null) || this._wailsPathIndex?.get(key) || this._wailsPathIndex?.get(rawName.toLowerCase()) || [...(this._wailsPathIndex?.entries?.() || [])].find(([k]) => k.toLowerCase().endsWith('\\' + key) || k.toLowerCase().endsWith('/' + key))?.[1];
-                if (!alreadyLoaded && path) toLoad.push([key, path]);
+                if (!alreadyLoaded && path) toLoad.push([localName, path]);
             }
-            await Promise.all(toLoad.map(([name, path]) =>
-                _wails.fs.readTextFile(path).then(t => { this.fileCache.levels.set(name, t); }).catch(e => console.warn('[openGmapText load err]', name, e))
-            ));
+            await Promise.all(toLoad.map(([name, path]) => {
+                const ext = name.split('.').pop().toLowerCase();
+                if (ext === 'graal' || ext === 'zelda') return _wails.fs.readFile(path).then(buf => { const lvl = Level.loadFromGraal(buf.buffer || buf); if (lvl) { this.fileCache.levelObjects = this.fileCache.levelObjects || new Map(); this.fileCache.levelObjects.set(name, lvl); } }).catch(e => console.warn('[openGmapText load err]', name, e));
+                return _wails.fs.readTextFile(path).then(t => { this.fileCache.levels.set(name.toLowerCase(), t); }).catch(e => console.warn('[openGmapText load err]', name, e));
+            }));
         }
         const entry = this._buildGmapEntry(text, filename, levelsOverride);
         if (!entry) return;
@@ -5884,8 +6449,10 @@ class LevelEditor {
         this.currentLevelIndex = this.levels.length - 1;
         this.level = entry.level;
         this.undoStack = []; this.redoStack = [];
+        this.invalidateTerrainCache();
         this.addLevelTab(this.currentLevelIndex);
         this.loadDefaultTileset();
+        if (entry.level.tilesetName && entry.level.tilesetName !== 'pics1.png') this.loadTilesetImage(entry.level.tilesetName);
         this.updateUI();
         this.render();
         this.saveSessionDebounced();
@@ -6098,7 +6665,8 @@ class LevelEditor {
             return !orig || orig !== serialized.gmapLevels[k];
         });
         const all = Object.entries(serialized.gmapLevels);
-        if (!all.length) return;
+        const allBuffers = Object.entries(serialized.gmapBuffers || {});
+        if (!all.length && !allBuffers.length && !serialized.terrainApplied) return;
         const gmapName = entry.name.endsWith('.gmap') ? entry.name : entry.name + '.gmap';
 
         if (_isWails && entry.fullPath) {
@@ -6115,55 +6683,58 @@ class LevelEditor {
             const box = document.createElement('div');
             box.style.cssText = 'position:fixed;top:50%;left:50%;transform:translate(-50%,-50%);background:#2b2b2b;border:1px solid #404040;padding:16px 20px;z-index:99999;min-width:280px;font-size:13px;color:#e0e0e0;'; box.classList.add('ed-dialog-box');
             box.innerHTML = `<div class="ed-dlg-title">Save GMAP: ${gmapName}</div>
-                <div style="margin-bottom:12px;">${changed.length} level(s) changed of ${all.length} total.</div>
+                <div style="margin-bottom:12px;">${changed.length + allBuffers.length} level(s) changed of ${all.length + allBuffers.length} total.</div>
                 <div style="display:flex;gap:8px;justify-content:flex-end;">
                   <button id="_gmSaveAll" style="padding:4px 10px;">Save All</button>
-                  <button id="_gmSaveChanged" style="padding:4px 10px;"${changed.length ? '' : ' disabled'}>Save Changed</button>
+                  <button id="_gmSaveChanged" style="padding:4px 10px;"${changed.length + allBuffers.length ? '' : ' disabled'}>Save Changed</button>
                   <button id="_gmCancel" style="padding:4px 10px;">Cancel</button>
                 </div>`;
             document.body.appendChild(box);
             const close = () => box.remove();
             box._closeModal = close;
             this.$('_gmCancel').onclick = close;
-            const doSave = async (subset) => {
+            const doSave = async (subset, bufferSubset) => {
                 close();
                 await this._writeWailsFile(entry.fullPath, entry.gmapText);
                 for (const [name, text] of subset) await this._writeWailsFile(levelPath(name), text);
+                for (const [name, data] of bufferSubset) await this._writeWailsFile(levelPath(name), data);
                 entry.gmapLevels = serialized.gmapLevels;
+                entry.gmapObjects = {};
                 entry.modified = false;
                 this.updateLevelTabs();
                 this.saveSessionDebounced();
             };
-            this.$('_gmSaveAll').onclick = () => doSave(all);
-            this.$('_gmSaveChanged').onclick = () => doSave(changed);
+            this.$('_gmSaveAll').onclick = () => doSave(all, allBuffers);
+            this.$('_gmSaveChanged').onclick = () => doSave(changed, allBuffers);
             return;
         }
 
         const box = document.createElement('div');
         box.style.cssText = 'position:fixed;top:50%;left:50%;transform:translate(-50%,-50%);background:#2b2b2b;border:1px solid #404040;padding:16px 20px;z-index:99999;min-width:280px;font-size:13px;color:#e0e0e0;'; box.classList.add('ed-dialog-box');
         box.innerHTML = `<div class="ed-dlg-title">Save GMAP: ${gmapName}</div>
-            <div style="margin-bottom:12px;">${changed.length} level(s) changed of ${all.length} total.</div>
+            <div style="margin-bottom:12px;">${changed.length + allBuffers.length} level(s) changed of ${all.length + allBuffers.length} total.</div>
             <div style="display:flex;gap:8px;justify-content:flex-end;">
               <button id="_gmSaveAll" style="padding:4px 10px;">Save All (ZIP)</button>
-              <button id="_gmSaveChanged" style="padding:4px 10px;"${changed.length ? '' : ' disabled'}>Save Changed (ZIP)</button>
+              <button id="_gmSaveChanged" style="padding:4px 10px;"${changed.length + allBuffers.length ? '' : ' disabled'}>Save Changed (ZIP)</button>
               <button id="_gmCancel" style="padding:4px 10px;">Cancel</button>
             </div>`;
         document.body.appendChild(box);
         const close = () => box.remove();
         box._closeModal = close;
         this.$('_gmCancel').onclick = close;
-        const doSave = async (subset) => {
+        const doSave = async (subset, bufferSubset) => {
             close();
             const { default: JSZip } = await import('https://cdn.jsdelivr.net/npm/jszip@3.10.1/+esm');
             const zip = new JSZip();
             for (const [name, text] of subset) zip.file(name, text);
+            for (const [name, data] of bufferSubset) zip.file(name, data);
             zip.file(gmapName, entry.gmapText);
             const blob = await zip.generateAsync({ type: 'blob' });
             this._downloadFile(gmapName.replace('.gmap', '.zip'), blob, 'application/zip');
             this.saveSessionDebounced();
         };
-        this.$('_gmSaveAll').onclick = () => doSave(all);
-        this.$('_gmSaveChanged').onclick = () => doSave(changed);
+        this.$('_gmSaveAll').onclick = () => doSave(all, allBuffers);
+        this.$('_gmSaveChanged').onclick = () => doSave(changed, allBuffers);
     }
 
     _promptRename(index, currentName, andSave = false) {
@@ -6432,6 +7003,7 @@ class LevelEditor {
         const lw = this.$('levelWidth'); if (lw) lw.value = this.level.width;
         const lh = this.$('levelHeight'); if (lh) lh.value = this.level.height;
         const tn = this.$('tilesetName'); if (tn) tn.value = this.level.tilesetName;
+        const typeCombo = this.$('tilesetTypeCombo'); if (typeCombo) typeCombo.value = String(this.level.tilesetType || 0);
         [0,1,2].forEach(i => { const cb = this.$(`visLayer${i}`); if (cb && this.level.layers[i]) cb.checked = this.level.layers[i].visible !== false; });
         const ls = this.$('layerSpinbox');
         if (ls) ls.value = this.currentLayer;
@@ -7057,18 +7629,20 @@ class LevelEditor {
 
     _getObjectSortFeetY(obj, th) {
         if (!obj) return 0;
+        const offset = this._terrainOffsetAtPixels(obj.x * th + th / 2, obj.y * th + th);
         if (obj.type === 'npc' || obj.type === 'baddy') {
             const scaleY = Math.abs((obj._stretchy ?? 1) * (obj._npcZoom ?? 1)) || 1;
             const height = (obj._imgH ?? 48) * scaleY;
-            return obj.y * th + ((obj._yOff || 0) * th) + (obj._ganiOY ?? 0) + height;
+            return obj.y * th + ((obj._yOff || 0) * th) + (obj._ganiOY ?? 0) + height - offset;
         }
-        return obj.y * th + th;
+        return obj.y * th + th - offset;
     }
 
     _getPlayerSortFeetY() {
         const p = this._player;
         if (!p) return 0;
-        return p.y + (p._ganiOY ?? 0) + Math.abs(p._imgH ?? 48);
+        const feet = p.y + (p._ganiOY ?? 0) + Math.abs(p._imgH ?? 48);
+        return feet - this._terrainOffsetAtPixels(p.x + (p._ganiOX ?? 0) + (p._imgW ?? 16) / 2, feet);
     }
 
     drawObjects() {
@@ -7096,12 +7670,14 @@ class LevelEditor {
         for (const _item of _drawItems) {
             if (_item.isPlayer) {
                 const _p = this._player, _pb = {};
+                const _playerOffset = this._terrainOffsetAtPixels(_p.x + (_p._ganiOX ?? 0) + (_p._imgW ?? tw) / 2, _p.y + (_p._ganiOY ?? 0) + (_p._imgH ?? 48));
+                const _playerY = _p.y - _playerOffset;
                 if (_p._hidden) {
                     const shake = _p._isMoving ? [-1, 0, 1, 0][Math.floor(performance.now() / 70) % 4] : 0;
-                    this._drawPlayLiftSprite(_p._hiddenType || 'bush', _p.x + 8 + shake, _p.y + 16);
-                } else this._drawGaniNPC(_p.x, _p.y, _p.gani, _p.dir, _p.frame, _pb, this._playerOverrides || {});
+                    this._drawPlayLiftSprite(_p._hiddenType || 'bush', _p.x + 8 + shake, _playerY + 16);
+                } else this._drawGaniNPC(_p.x, _playerY, _p.gani, _p.dir, _p.frame, _pb, this._playerOverrides || {});
                 if (_p._carrying && !_p._hidden) {
-                    const baseX = _p.x + (_p._ganiOX ?? 0) + (_p._imgW ?? tw) / 2, baseY = _p.y + (_p._ganiOY ?? 0);
+                    const baseX = _p.x + (_p._ganiOX ?? 0) + (_p._imgW ?? tw) / 2, baseY = _playerY + (_p._ganiOY ?? 0);
                     let itemX = baseX - 16, itemY = baseY - 22;
                     if (_p._liftTimer > 0) {
                         const t = 1 - _p._liftTimer / (_p._liftDuration || 0.2), [fromX, fromY, toX, toY] = [[-16,-28,-16,-34],[-31,-12,-17,-31],[-16,0,-16,-26],[-1,-12,-15,-31]][_p.dir];

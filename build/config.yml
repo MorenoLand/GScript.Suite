@@ -11,7 +11,7 @@ info:
   description: GSuite desktop editor
   copyright: Copyright (c) MorenoLand
   comments: GSuite desktop editor
-  version: 0.1.85
+  version: 0.1.86
 
 # iOS build configuration (uncomment to customise iOS project generation)
 # Note: Keys under `ios` OVERRIDE values under `info` when set.
