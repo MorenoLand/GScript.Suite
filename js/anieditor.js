@@ -23,7 +23,8 @@ class AniSprite {
     duplicate(newIndex) {
         const retval = new AniSprite();
         retval.index = newIndex;
-        retval.attachedSprites = [...this.attachedSprites];
+        retval.attachedSprites = this.attachedSprites.map(a => ({index: a.index, offset: {...a.offset}}));
+        retval.m_drawIndex = this.m_drawIndex;
         retval.colorEffect = {...this.colorEffect};
         retval.colorEffectEnabled = this.colorEffectEnabled;
         retval.comment = this.comment;
@@ -124,26 +125,78 @@ function serializeFramePiece(piece) {
     return `${name} ${piece.xoffset} ${piece.yoffset}`;
 }
 
+function ganiInt(value) {
+    const text = String(value ?? "").trim();
+    if (!text) return -1;
+    if (text === "true") return 1;
+    if (text === "false") return 0;
+    if (/^0x/i.test(text)) {
+        const hex = parseInt(text.slice(2), 16);
+        return Number.isFinite(hex) ? hex : 0;
+    }
+    const number = parseInt(text, 10);
+    return Number.isFinite(number) ? number : -1;
+}
+
+function ganiFloat(value) {
+    const text = String(value ?? "").trim();
+    if (!text) return 0;
+    if (text === "true") return 1;
+    if (text === "false") return 0;
+    if (/^0x/i.test(text)) return parseInt(text.slice(2), 16) >>> 0;
+    const number = parseFloat(text);
+    return Number.isFinite(number) ? number : -1;
+}
+
+function ganiTrue(value) {
+    const text = String(value ?? "").trim().toLowerCase();
+    return text === "true" || text === "1";
+}
+
+function movieInBetween(frameId, currentTime, nextTime, value, nextValue) {
+    const part = ((frameId - currentTime) * (nextValue - value)) / (nextTime - currentTime);
+    return Math.floor(part) + value;
+}
+
+function resolvePieceSprite(piece, ani) {
+    if (!ani || !piece.spriteName) return;
+    const named = ani.getAniSprite(SPRITE_INDEX_STRING, piece.spriteName);
+    if (named) { piece.spriteIndex = named.index; return; }
+    for (const sprite of ani.sprites.values()) {
+        if (sprite.comment === piece.spriteName || sprite.type === piece.spriteName) { piece.spriteIndex = sprite.index; return; }
+    }
+}
+
 function parseFramePiece(offset) {
     const parts = offset.trim().split(/\s+/).filter(p => p);
     if (parts.length < 3) return null;
     const piece = new FramePieceSprite();
-    const spriteNameOrIndex = parts[0];
-    const spriteIndex = parseInt(spriteNameOrIndex);
-    if (isNaN(spriteIndex)) {
-        piece.spriteIndex = SPRITE_INDEX_STRING;
-        piece.spriteName = spriteNameOrIndex;
-    } else {
-        piece.spriteIndex = spriteIndex;
+    const head = parts[0];
+    const numeric = /^[-+]?\d/.test(head) || /^0x/i.test(head) || head === "true" || head === "false";
+    if (numeric) {
+        piece.spriteIndex = ganiInt(head);
         piece.spriteName = "";
+    } else {
+        piece.spriteIndex = SPRITE_INDEX_STRING;
+        piece.spriteName = head;
     }
-    piece.xoffset = parseFloat(parts[1]) || 0;
-    piece.yoffset = parseFloat(parts[2]) || 0;
-    if (parts.length >= 4) piece.xscale = parseFloat(parts[3]) || 1.0;
-    if (parts.length >= 5) piece.yscale = parseFloat(parts[4]) || 1.0;
-    if (parts.length >= 6) piece.rotation = parseFloat(parts[5]) || 0.0;
-    if (parts.length >= 7) piece._zoom = parseFloat(parts[6]) || 1.0;
+    piece.xoffset = ganiInt(parts[1]);
+    piece.yoffset = ganiInt(parts[2]);
     return piece;
+}
+
+function parseFramePieces(text, ani) {
+    const pieces = [];
+    for (const group of String(text || "").split(",")) {
+        const parts = group.trim().split(/\s+/).filter(p => p);
+        for (let index = 0; index + 2 < parts.length; index += 3) {
+            const piece = parseFramePiece(parts.slice(index, index + 3).join(" "));
+            if (!piece) continue;
+            resolvePieceSprite(piece, ani);
+            pieces.push(piece);
+        }
+    }
+    return pieces;
 }
 
 class FramePieceSound {
@@ -154,6 +207,7 @@ class FramePieceSound {
         this.xoffset = 0;
         this.yoffset = 0;
         this.fileName = "";
+        this.tag = 1;
     }
     toString() {
         return `Sound: ${this.fileName}`;
@@ -265,24 +319,99 @@ class MovieItem {
         }
         return state;
     }
-    getInterpolatedFrame(frameId) {
-        const state = this.getEffectiveFrame(frameId);
-        if (!state) return null;
-        const prevKey = this.getFrameKey(frameId);
-        let nextKey = Infinity;
-        for (const key of this.frames.keys()) {
-            const frameKey = Number(key);
-            if (frameKey > frameId && frameKey < nextKey) nextKey = frameKey;
+    keyEntries() {
+        return Array.from(this.frames.entries()).map(([time, state]) => ({time: Number(time), state: state || {}}));
+    }
+    getKeyValue(state, name) {
+        if (!state) return undefined;
+        if (name === "sprite #") return state.spriteIndex !== undefined ? state.spriteIndex : state.attrs?.["sprite #"];
+        if (Object.prototype.hasOwnProperty.call(state, name)) return state[name];
+        if (state.attrs && Object.prototype.hasOwnProperty.call(state.attrs, name)) return state.attrs[name];
+        return undefined;
+    }
+    findKey(frameId, name) {
+        let previous = null, next = null;
+        for (const entry of this.keyEntries()) {
+            if (this.getKeyValue(entry.state, name) === undefined) continue;
+            if (entry.time <= frameId) previous = entry;
+            else if (!next) next = entry;
         }
-        if (prevKey < 0 || !Number.isFinite(nextKey) || nextKey === prevKey) return state;
-        const prevState = this.getEffectiveFrame(prevKey);
-        const nextState = this.getEffectiveFrame(nextKey);
-        if (!prevState || !nextState) return state;
-        const t = (frameId - prevKey) / (nextKey - prevKey);
-        for (const key of ["dx", "dy"]) {
-            if (Number.isFinite(prevState[key]) && Number.isFinite(nextState[key])) {
-                state[key] = prevState[key] + (nextState[key] - prevState[key]) * t;
+        return {previous, next};
+    }
+    allKeyNames() {
+        const names = new Set();
+        for (const {state} of this.keyEntries()) {
+            for (const key of Object.keys(state)) if (key !== "attrs" && key !== "spriteIndex") names.add(key);
+            for (const key of Object.keys(state.attrs || {})) names.add(key);
+        }
+        if (Array.from(this.frames.values()).some(state => state && state.spriteIndex !== undefined)) names.add("sprite #");
+        return names;
+    }
+    getInterpolatedFrame(frameId) {
+        if (!this.frames.size) return null;
+        const state = {...this, attrs: {...(this.attrs || {})}};
+        state.visible = false;
+        state.layer = 0;
+        state.dx = 0;
+        state.dy = 0;
+        state.ani = this.ani || "";
+        state.chat = "";
+        state.text = this.kind === "TEXT" ? (this.text || "") : "";
+        state.soundShown = false;
+        const visible = this.findKey(frameId, "visible");
+        if (visible.previous) state.visible = ganiTrue(this.getKeyValue(visible.previous.state, "visible"));
+        for (const entry of this.keyEntries()) {
+            if (entry.time > frameId) break;
+            const value = this.getKeyValue(entry.state, "layer");
+            if (value === undefined) continue;
+            const layer = ganiInt(value);
+            if (layer >= 0 && layer <= 3) state.layer = layer - 1;
+        }
+        const offsetX = this.findKey(frameId, "dx");
+        if (offsetX.previous) {
+            const current = offsetX.previous.state;
+            let dx = ganiInt(this.getKeyValue(current, "dx"));
+            let dy = this.getKeyValue(current, "dy") === undefined ? -1 : ganiInt(this.getKeyValue(current, "dy"));
+            if (offsetX.next && offsetX.next.time !== offsetX.previous.time) {
+                const nextDx = ganiInt(this.getKeyValue(offsetX.next.state, "dx"));
+                const nextDy = this.getKeyValue(offsetX.next.state, "dy") === undefined ? -1 : ganiInt(this.getKeyValue(offsetX.next.state, "dy"));
+                if (nextDx !== dx || nextDy !== dy) {
+                    dx = movieInBetween(frameId, offsetX.previous.time, offsetX.next.time, dx, nextDx);
+                    dy = movieInBetween(frameId, offsetX.previous.time, offsetX.next.time, dy, nextDy);
+                }
             }
+            state.dx = dx;
+            state.dy = dy;
+        }
+        const textZoom = this.findKey(frameId, "zoom");
+        if (textZoom.previous) {
+            const zoom = ganiFloat(this.getKeyValue(textZoom.previous.state, "zoom"));
+            state.textZoom = zoom;
+            if (textZoom.next && textZoom.next.time !== textZoom.previous.time) {
+                const nextZoom = ganiFloat(this.getKeyValue(textZoom.next.state, "zoom"));
+                if (nextZoom !== zoom) state.textZoom = zoom + (nextZoom - zoom) * (frameId - textZoom.previous.time) / (textZoom.next.time - textZoom.previous.time);
+            }
+        }
+        for (const name of this.allKeyNames()) {
+            if (["visible", "layer", "dx", "dy", "zoom", "sprite #"].includes(name)) continue;
+            const found = this.findKey(frameId, name);
+            if (!found.previous) continue;
+            const value = this.getKeyValue(found.previous.state, name);
+            if (name === "text") state.text = String(value).trim();
+            else if (name === "font" || name === "file") state[name] = String(value).trim();
+            else if (name === "dir") state.dir = ganiInt(value);
+            else if (name === "playerlook") state.playerlook = ganiTrue(value);
+            else if (["bold", "italic", "centered", "rightaligned", "underline", "strikeout", "wordwrap", "shaded"].includes(name)) state[name] = ganiTrue(value);
+            else if (["chat", "color", "ani", "head", "body", "sword", "shield", "horse"].includes(name)) state[name] = value;
+            else state.attrs[name] = value;
+        }
+        const sprite = this.findKey(frameId, "sprite #");
+        if (sprite.previous) state.spriteIndex = ganiInt(this.getKeyValue(sprite.previous.state, "sprite #"));
+        if (this.kind === "SOUND") {
+            const first = this.keyEntries()[0];
+            state.soundShown = !!first && first.time === Math.floor(frameId);
+            const file = this.findKey(frameId, "file");
+            state.soundFile = file.previous ? String(this.getKeyValue(file.previous.state, "file")).trim() : "";
         }
         return state;
     }
@@ -312,6 +441,10 @@ class Animation {
         this.singleDir = false;
         this.continous = false;
         this.speed = 1.0;
+        this.layer = 0;
+        this.hasLayer = false;
+        this.antialias = false;
+        this.rotateProjectile = false;
         this.sprites = new Map();
         this.frames = [];
         this.isMovieMode = false;
@@ -546,53 +679,78 @@ const zoomFactors = [0.25, 0.3, 0.35, 0.4, 0.5, 0.75, 1.0, 2, 3, 4, 8, 12, 16, 2
 const dpr = window.devicePixelRatio || 1;
 const MOVIE_DIR_NAMES = ["up", "left", "down", "right"];
 const MOVIE_ACTOR_KINDS = ["CHAR", "SPRITE", "SOUND", "TEXT"];
-const MOVIE_APPEARANCE_FIELDS = ["head", "body", "sword", "shield", "horse", "attr1", "attr2", "attr3", "param1", "param2", "param3", "color0", "color1", "color2", "color3", "color4"];
+const MOVIE_APPEARANCE_FIELDS = ["head", "body", "sword", "shield", "horse",
+    ...Array.from({length: 30}, (_, i) => `attr${i + 1}`),
+    ...Array.from({length: 30}, (_, i) => `param${i + 1}`),
+    ...Array.from({length: 5}, (_, i) => `color${i}`)];
 const MOVIE_EMPTY_DEFAULT = "__movie_empty__";
-function encodeMovieValue(value) {
-    return encodeURIComponent(String(value ?? "")).replace(/%20/g, "+");
+function splitMovieItems(text) {
+    const items = [];
+    let current = "", quoted = false;
+    for (const char of String(text || "")) {
+        if (char === '"') { quoted = !quoted; current += char; }
+        else if (char === "," && !quoted) { items.push(current); current = ""; }
+        else current += char;
+    }
+    items.push(current);
+    return items;
 }
-function decodeMovieValue(value) {
-    return decodeURIComponent(String(value ?? "").replace(/\+/g, "%20"));
+function unquoteMovieValue(value) {
+    const text = String(value ?? "").trim();
+    return text.length >= 2 && text.startsWith('"') && text.endsWith('"') ? text.slice(1, -1).replace(/""/g, '"') : text;
+}
+function quoteMovieValue(value) {
+    const text = String(value ?? "");
+    return /[",]/.test(text) ? `"${text.replace(/"/g, '""')}"` : text;
 }
 function serializeMovieFrameState(item, frameId) {
     const state = item.frames.get(frameId) || {};
     const pairs = [];
+    const has = key => Object.prototype.hasOwnProperty.call(state, key);
     const push = (key, value) => {
         if (value === undefined || value === null || value === "") return;
         pairs.push([key, value]);
     };
-    if (Object.prototype.hasOwnProperty.call(state, "visible")) push("visible", state.visible ? "true" : "false");
-    if (Object.prototype.hasOwnProperty.call(state, "dx")) push("dx", state.dx);
-    if (Object.prototype.hasOwnProperty.call(state, "dy")) push("dy", state.dy);
-    if (Object.prototype.hasOwnProperty.call(state, "layer")) push("layer", state.layer);
-    push("ani", state.ani);
-    if (Object.prototype.hasOwnProperty.call(state, "dir")) push("dir", state.dir);
-    if (Object.prototype.hasOwnProperty.call(state, "playerlook")) push("playerlook", state.playerlook ? "true" : "false");
-    push("chat", state.chat);
-    push("text", state.text);
-    push("head", state.head);
-    push("body", state.body);
-    push("sprite #", state.spriteIndex ?? state["sprite #"]);
-    for (const [key, value] of Object.entries(state.attrs || {})) {
-        push(key, value);
+    if (has("visible")) push("visible", state.visible ? "true" : "false");
+    if (has("dx")) push("dx", state.dx);
+    if (has("dy")) push("dy", state.dy);
+    if (has("layer")) push("layer", state.layer);
+    if (has("ani")) push("ani", state.ani);
+    if (has("dir")) push("dir", state.dir);
+    if (has("playerlook")) push("playerlook", state.playerlook ? "true" : "false");
+    if (has("chat")) push("chat", state.chat);
+    if (has("text")) push("text", state.text);
+    if (has("head")) push("head", state.head);
+    if (has("body")) push("body", state.body);
+    if (has("spriteIndex")) push("sprite #", state.spriteIndex);
+    else if (has("sprite #")) push("sprite #", state["sprite #"]);
+    for (const key of ["font", "color", "zoom", "bold", "italic", "centered", "rightaligned", "underline", "strikeout", "wordwrap", "shaded"]) {
+        if (!has(key)) continue;
+        push(key, typeof state[key] === "boolean" ? (state[key] ? "true" : "false") : state[key]);
     }
-    return pairs.map(([k, v]) => `${k}=${encodeMovieValue(v)}`).join(",");
+    for (const [key, value] of Object.entries(state.attrs || {})) push(key, value);
+    return pairs.map(([key, value]) => `${key}=${quoteMovieValue(value)}`).join(",");
 }
 function parseMovieFrameState(text) {
     const attrs = {};
-    const state = { attrs };
-    const tokens = String(text || "").split(",").map(t => t.trim()).filter(Boolean);
-    for (const token of tokens) {
-        const eq = token.indexOf("=");
-        if (eq < 0) {
-            if (!state.ani) state.ani = decodeMovieValue(token);
+    const state = {attrs};
+    const seen = new Set();
+    for (const token of splitMovieItems(text)) {
+        const item = token.trim();
+        if (!item) continue;
+        const equals = item.indexOf("=");
+        if (equals < 0) {
+            if (!state.ani) state.ani = unquoteMovieValue(item);
             continue;
         }
-        const key = token.slice(0, eq).toLowerCase();
-        const value = decodeMovieValue(token.slice(eq + 1));
-        if (key === "dx" || key === "dy" || key === "layer" || key === "dir") state[key] = parseFloat(value) || 0;
-        else if (key === "sprite #") state.spriteIndex = parseFloat(value) || 0;
-        else if (key === "visible") state.visible = value !== "false";
+        const key = item.slice(0, equals).trim().toLowerCase();
+        const value = unquoteMovieValue(item.slice(equals + 1));
+        const seenKey = key === "sprite #" ? "spriteIndex" : key;
+        if (seen.has(seenKey)) continue;
+        seen.add(seenKey);
+        if (key === "dx" || key === "dy" || key === "layer" || key === "dir") state[key] = ganiInt(value);
+        else if (key === "sprite #") state.spriteIndex = ganiInt(value);
+        else if (key === "visible") state.visible = ganiTrue(value);
         else if (key === "playerlook") state.playerlook = value === "true";
         else if (key === "ani" || key === "chat" || key === "text" || key === "head" || key === "body") state[key] = value;
         else attrs[key] = value;
@@ -626,6 +784,7 @@ let playPosition = 0;
 let playStartTime = 0;
 let moviePlaybackFrame = null;
 let movieSoundFrameKeys = new Set();
+let playedFrameSoundTags = new Set();
 let keysSwapped = localStorage.getItem("editorSwapKeys") === "true";
 if (localStorage.getItem("editorShowGrid") === null) {
     localStorage.setItem("editorShowGrid", "true");
@@ -1110,7 +1269,7 @@ function drawPixelGrid(ctx) {
 }
 
 function drawSprite(ctx, sprite, x, y, level = 0, drawnSprites = null, opts = null) {
-    if (level > 3) return;
+    if (level > 32) return;
     if (!sprite) return;
     if (drawnSprites === null) drawnSprites = new Set();
     if (level > 0 && drawnSprites.has(sprite.index)) return;
@@ -1126,58 +1285,43 @@ function drawSprite(ctx, sprite, x, y, level = 0, drawnSprites = null, opts = nu
         ctx.rotate(sprite.rotation * Math.PI / 180);
         ctx.translate(-sprite.width / 2, -sprite.height / 2);
     }
-    for (let i = 0; i < sprite.m_drawIndex && i < sprite.attachedSprites.length; i++) {
+    const behindCount = Math.min(sprite.m_drawIndex, sprite.attachedSprites.length);
+    for (let i = behindCount - 1; i >= 0; i--) {
         const attached = sprite.attachedSprites[i];
         const child = currentAnimation.getAniSprite(attached.index, "");
-        if (child && level < 10) drawSprite(ctx, child, attached.offset.x, attached.offset.y, level + 1, drawnSprites, opts);
+        if (child && level < 32) drawSprite(ctx, child, attached.offset.x, attached.offset.y, level + 1, drawnSprites, opts);
     }
     const img = getSpriteImage(sprite);
     if (img) {
-        const imageName = sprite.type === "CUSTOM" ? sprite.customImageName.toLowerCase() : (currentAnimation ? currentAnimation.getDefaultImageName(sprite.type) : "").toLowerCase();
-        const isLightImage = (sprite.mode === 0) || (sprite.mode === undefined && localStorage.getItem("editorLightEffects") !== "false" && (imageName.includes("light") || sprite.comment.toLowerCase().includes("light")));
+        const colorEffect = sprite.colorEffectEnabled ? sprite.colorEffect : null;
+        const hasColorEffect = !!colorEffect && (colorEffect.r < 255 || colorEffect.g < 255 || colorEffect.b < 255 || colorEffect.a < 255 || (sprite.mode ?? 0) > 1);
+        const isLightImage = hasColorEffect && sprite.mode === 0;
         ctx.save();
         ctx.imageSmoothingEnabled = false;
         if (isLightImage) {
-            const colorKey = sprite.colorEffectEnabled && sprite.colorEffect ? `${sprite.colorEffect.r},${sprite.colorEffect.g},${sprite.colorEffect.b},${sprite.colorEffect.a}` : "none";
+            const colorKey = `${colorEffect.r},${colorEffect.g},${colorEffect.b},${colorEffect.a}`;
             const cacheKey = `${img.src}_${sprite.left},${sprite.top},${sprite.width},${sprite.height}_${colorKey}`;
-            if (!sprite._lightCanvas || sprite._lightCacheKey !== cacheKey) {
+            if (!sprite._cachedColorCanvas || sprite._cachedColorKey !== cacheKey) {
                 const tempCanvas = document.createElement("canvas");
                 tempCanvas.width = sprite.width;
                 tempCanvas.height = sprite.height;
                 const tempCtx = tempCanvas.getContext("2d");
                 tempCtx.imageSmoothingEnabled = false;
                 tempCtx.drawImage(img, sprite.left, sprite.top, sprite.width, sprite.height, 0, 0, sprite.width, sprite.height);
-        if (sprite.colorEffectEnabled && sprite.colorEffect) {
-                    tempCtx.globalCompositeOperation = "multiply";
-                    tempCtx.fillStyle = `rgb(${sprite.colorEffect.r}, ${sprite.colorEffect.g}, ${sprite.colorEffect.b})`;
-                    tempCtx.fillRect(0, 0, sprite.width, sprite.height);
-                    tempCtx.globalCompositeOperation = "destination-in";
-                    tempCtx.drawImage(img, sprite.left, sprite.top, sprite.width, sprite.height, 0, 0, sprite.width, sprite.height);
-                }
-                const imageData = tempCtx.getImageData(0, 0, sprite.width, sprite.height);
-                const data = imageData.data;
-                for (let i = 0; i < data.length; i += 4) {
-                    const r = data[i];
-                    const g = data[i + 1];
-                    const b = data[i + 2];
-                    const a = data[i + 3];
-                    const brightness = (r + g + b) / 3;
-                    if (brightness < 30) {
-                        data[i + 3] = 0;
-                    } else {
-                        const alpha = Math.min(255, brightness * 1.2);
-                        data[i + 3] = Math.floor(alpha * (a / 255) * 0.7);
-                    }
-                }
-                tempCtx.putImageData(imageData, 0, 0);
-                sprite._lightCanvas = tempCanvas;
-                sprite._lightCacheKey = cacheKey;
+                tempCtx.globalCompositeOperation = "multiply";
+                tempCtx.fillStyle = `rgb(${colorEffect.r}, ${colorEffect.g}, ${colorEffect.b})`;
+                tempCtx.fillRect(0, 0, sprite.width, sprite.height);
+                tempCtx.globalCompositeOperation = "destination-in";
+                tempCtx.drawImage(img, sprite.left, sprite.top, sprite.width, sprite.height, 0, 0, sprite.width, sprite.height);
+                sprite._cachedColorCanvas = tempCanvas;
+                sprite._cachedColorKey = cacheKey;
             }
             ctx.globalCompositeOperation = "lighter";
+            ctx.globalAlpha = colorEffect.a / 255;
+            ctx.drawImage(sprite._cachedColorCanvas, 0, 0, sprite.width, sprite.height);
             ctx.globalAlpha = 1.0;
-            ctx.drawImage(sprite._lightCanvas, 0, 0, sprite.width, sprite.height);
             ctx.globalCompositeOperation = "source-over";
-        } else if (sprite.mode === 1) {
+        } else if (hasColorEffect && sprite.mode === 1) {
             const colorKey = sprite.colorEffectEnabled && sprite.colorEffect ? `${sprite.colorEffect.r},${sprite.colorEffect.g},${sprite.colorEffect.b},${sprite.colorEffect.a}` : "none";
             const cacheKey = `${img.src}_${sprite.left},${sprite.top},${sprite.width},${sprite.height}_${colorKey}`;
             if (!sprite._cachedColorCanvas || sprite._cachedColorKey !== cacheKey) {
@@ -1224,9 +1368,11 @@ function drawSprite(ctx, sprite, x, y, level = 0, drawnSprites = null, opts = nu
             }
             ctx.globalCompositeOperation = "destination-out";
             ctx.imageSmoothingEnabled = false;
+            ctx.globalAlpha = colorEffect ? colorEffect.a / 255 : 1.0;
             ctx.drawImage(sprite._cachedColorCanvas, 0, 0);
+            ctx.globalAlpha = 1.0;
             ctx.globalCompositeOperation = "source-over";
-        } else if (sprite.colorEffectEnabled && sprite.colorEffect) {
+        } else if (hasColorEffect && colorEffect) {
             const colorKey = `${sprite.colorEffect.r},${sprite.colorEffect.g},${sprite.colorEffect.b},${sprite.colorEffect.a}`;
             const cacheKey = `${img.src}_${sprite.left},${sprite.top},${sprite.width},${sprite.height}_${colorKey}`;
             if (!sprite._cachedColorCanvas || sprite._cachedColorKey !== cacheKey) {
@@ -1244,8 +1390,10 @@ function drawSprite(ctx, sprite, x, y, level = 0, drawnSprites = null, opts = nu
                 sprite._cachedColorCanvas = tempCanvas;
                 sprite._cachedColorKey = cacheKey;
             }
+            ctx.globalAlpha = colorEffect.a / 255;
             ctx.imageSmoothingEnabled = false;
             ctx.drawImage(sprite._cachedColorCanvas, 0, 0);
+            ctx.globalAlpha = 1.0;
         } else {
             ctx.imageSmoothingEnabled = false;
             ctx.drawImage(img, sprite.left, sprite.top, sprite.width, sprite.height, 0, 0, sprite.width, sprite.height);
@@ -1259,7 +1407,7 @@ function drawSprite(ctx, sprite, x, y, level = 0, drawnSprites = null, opts = nu
     for (let i = sprite.m_drawIndex; i < sprite.attachedSprites.length; i++) {
         const attached = sprite.attachedSprites[i];
         const child = currentAnimation.getAniSprite(attached.index, "");
-        if (child && level < 10) drawSprite(ctx, child, attached.offset.x, attached.offset.y, level + 1, drawnSprites, opts);
+        if (child && level < 32) drawSprite(ctx, child, attached.offset.x, attached.offset.y, level + 1, drawnSprites, opts);
     }
     ctx.restore();
 }
@@ -1804,7 +1952,7 @@ function drawFrame(ctx, frame, dir, opts = null) {
                     }
                     ctx.restore();
                 }
-                drawSpriteCached(ctx, sprite, piece.xoffset, piece.yoffset, opts);
+                drawAniPiece(ctx, sprite, piece, opts);
             }
         } else if (!_isExportRender && piece.type === "sound") {
             ctx.fillStyle = "#ffff00";
@@ -2035,22 +2183,46 @@ function getMovieItemState(item, frameId = getMovieRenderFrameId()) {
 
 function getMovieTextStyle(state) {
     const attrs = state.attrs || {};
-    const fontSize = parseFloat(attrs.fontsize || attrs.size || 20) || 20;
-    const text = state.text || state.chat || state.name || "text";
-    return {attrs, fontSize, text};
+    const zoom = state.textZoom !== undefined ? state.textZoom : ganiFloat(attrs.zoom === undefined ? 1 : attrs.zoom);
+    const fontSize = Math.max(1, 20 * (Number.isFinite(zoom) ? zoom : 1));
+    let color = "#ffffff";
+    if (state.color !== undefined) {
+        const hex = String(state.color).replace(/^#/, "").replace(/^0x/i, "").padStart(6, "0").slice(-6);
+        if (/^[0-9a-f]{6}$/i.test(hex)) color = "#" + hex;
+    }
+    return {
+        attrs,
+        fontSize,
+        text: state.text || "",
+        font: state.font || "Tempus Sans ITC",
+        color,
+        bold: !!state.bold,
+        italic: !!state.italic,
+        centered: !!state.centered,
+        rightaligned: !!state.rightaligned,
+        underline: !!state.underline,
+        strikeout: !!state.strikeout,
+        wordwrap: state.wordwrap !== false,
+        shaded: state.shaded !== false
+    };
+}
+
+function movieTextFont(style) {
+    return `${style.italic ? "italic " : ""}${style.bold ? "bold " : ""}${style.fontSize}px ${getFontFamily(style.font)}`;
 }
 
 function getMovieTextBounds(state) {
     const style = getMovieTextStyle(state);
     if (!getMovieTextBounds.canvas) getMovieTextBounds.canvas = document.createElement("canvas");
     const ctx = getMovieTextBounds.canvas.getContext("2d");
-    ctx.font = `bold ${style.fontSize}px 'TempusSansITC','Tempus Sans ITC',sans-serif`;
+    ctx.font = movieTextFont(style);
     const metrics = ctx.measureText(style.text);
     const width = Math.max(1, metrics.width || style.text.length * style.fontSize * 0.6);
     const height = Math.max(style.fontSize, (metrics.actualBoundingBoxAscent || style.fontSize * 0.8) + (metrics.actualBoundingBoxDescent || style.fontSize * 0.2));
-    const shadowPad = style.attrs.shaded === "false" ? 1 : 3;
+    const shadowPad = style.shaded ? 3 : 1;
     let x = state.dx || 0;
-    x -= width / 2;
+    if (style.centered) x -= width / 2;
+    else if (style.rightaligned) x -= width;
     return {
         x: x - shadowPad,
         y: (state.dy || 0) - height / 2 - shadowPad,
@@ -2067,13 +2239,14 @@ function getMovieItemBounds(item, frameId = getMovieRenderFrameId()) {
         return getMovieTextBounds(state);
     }
     if (kind === "SPRITE") {
-        const spriteIndex = state.spriteIndex ?? state["sprite #"] ?? 0;
+        const spriteIndex = state.spriteIndex ?? state["sprite #"];
+        if (spriteIndex === undefined) return null;
         const sprite = currentAnimation?.getAniSprite(spriteIndex, "");
         return {x: state.dx || 0, y: state.dy || 0, width: sprite?.width || 16, height: sprite?.height || 16};
     }
     const subAni = getMovieActorGani(state);
     if (subAni?.frames?.length) {
-        const frame = subAni.frames[Math.floor(frameId) % subAni.frames.length];
+        const frame = subAni.frames[getMovieSubFrame(item, subAni, state, frameId)];
         const bb = frame?.boundingBox || subAni.boundingBox || {x: 0, y: 0, width: 32, height: 48};
         return {x: (state.dx || 0) + bb.x, y: (state.dy || 0) + bb.y, width: bb.width || 32, height: bb.height || 48};
     }
@@ -2148,12 +2321,19 @@ async function loadMovieActorGani(keys) {
 function getMovieActorDefaultOverrides(state) {
     if (state.playerlook === true) return new Map();
     const attrs = state.attrs || {};
-    const pairs = {head: state.head, body: state.body, sword: attrs.sword, shield: attrs.shield, horse: attrs.horse, attr1: attrs.attr1, attr2: attrs.attr2, attr3: attrs.attr3, param1: attrs.param1, param2: attrs.param2, param3: attrs.param3};
     const out = new Map();
-    for (const [key, value] of Object.entries(pairs)) {
-        if (key === "head" || key === "body") { if (value !== undefined) out.set(key.toUpperCase(), value || MOVIE_EMPTY_DEFAULT); }
-        else if (["sword", "shield", "horse", "attr1", "attr2", "attr3"].includes(key)) out.set(key.toUpperCase(), value || MOVIE_EMPTY_DEFAULT);
-        else if (value !== undefined) out.set(key.toUpperCase(), value || MOVIE_EMPTY_DEFAULT);
+    for (const key of ["head", "body"]) {
+        const value = state[key] !== undefined ? state[key] : attrs[key];
+        if (value !== undefined) out.set(key.toUpperCase(), value || MOVIE_EMPTY_DEFAULT);
+    }
+    for (const key of ["sword", "shield", "horse"]) {
+        if (attrs[key] !== undefined) out.set(key.toUpperCase(), attrs[key] || MOVIE_EMPTY_DEFAULT);
+    }
+    for (let number = 1; number <= 30; number++) {
+        for (const prefix of ["attr", "param"]) {
+            const value = attrs[`${prefix}${number}`];
+            if (value !== undefined) out.set(`${prefix.toUpperCase()}${number}`, value || MOVIE_EMPTY_DEFAULT);
+        }
     }
     return out;
 }
@@ -2226,9 +2406,57 @@ async function playGaniSound(fileName) {
     } catch (e) {}
 }
 
-function playMovieSubGaniSounds(ani, frame, state, frameId, itemId) {
+function getMovieSubFrame(item, ani, state, frameId) {
+    if (!ani?.frames?.length) return 0;
+    const ticks = Math.max(0, Math.floor(frameId));
+    let baseTime = 0, lastName = "";
+    if (item) {
+        for (const entry of item.keyEntries()) {
+            if (entry.time > frameId) break;
+            const name = item.getKeyValue(entry.state, "ani");
+            if (name === undefined) continue;
+            if (String(name) !== lastName || !ani.continous) baseTime = entry.time;
+            lastName = String(name);
+        }
+    }
+    let frameIndex = 0, tick = 0;
+    for (let time = baseTime; time < ticks; time++) {
+        const frame = ani.frames[frameIndex];
+        if (!frame) break;
+        tick++;
+        const duration = Math.max(1, Math.round((frame.duration || 50) / 50));
+        if (tick >= duration) {
+            tick = 0;
+            frameIndex++;
+            if (frameIndex >= ani.frames.length) {
+                if (ani.looped) frameIndex = 0;
+                else { frameIndex = ani.frames.length - 1; break; }
+            }
+        }
+    }
+    return frameIndex;
+}
+
+function drawAniPiece(ctx, sprite, piece, opts = null) {
+    const zoom = piece._zoom || 1.0;
+    const scaleX = (piece.xscale ?? 1.0) * zoom, scaleY = (piece.yscale ?? 1.0) * zoom;
+    const rotation = (piece.rotation || 0) * Math.PI / 180;
+    if (rotation === 0 && scaleX === 1 && scaleY === 1) {
+        drawSpriteCached(ctx, sprite, piece.xoffset, piece.yoffset, opts);
+        return;
+    }
+    ctx.save();
+    ctx.translate(piece.xoffset, piece.yoffset);
+    ctx.translate(sprite.width / 2, sprite.height / 2);
+    ctx.scale(scaleX, scaleY);
+    ctx.rotate(rotation);
+    ctx.translate(-sprite.width / 2, -sprite.height / 2);
+    drawSpriteCached(ctx, sprite, 0, 0, opts);
+    ctx.restore();
+}
+
+function playMovieSubGaniSounds(ani, frame, state, subFrameId, itemId) {
     if (!isPlaying || !currentAnimation?.isMovieMode || _isExportRender || !frame?.sounds?.length) return;
-    const subFrameId = Math.max(0, Math.floor(frameId));
     for (let i = 0; i < frame.sounds.length; i++) {
         const sound = frame.sounds[i];
         const key = [itemId ?? "item", state.ani || ani.fileName || "ani", subFrameId, i, sound.fileName].join(":");
@@ -2238,12 +2466,13 @@ function playMovieSubGaniSounds(ani, frame, state, frameId, itemId) {
     }
 }
 
-function drawMovieSubGani(ctx, ani, state, frameId, itemId = null) {
+function drawMovieSubGani(ctx, ani, state, frameId, itemId = null, item = null) {
     if (!ani?.frames?.length) return false;
-    const subFrameId = Math.max(0, Math.floor(frameId));
-    const frame = ani.frames[ani.looped ? subFrameId % ani.frames.length : Math.min(subFrameId, ani.frames.length - 1)];
+    const subFrameId = getMovieSubFrame(item, ani, state, frameId);
+    state.subFrameId = subFrameId;
+    const frame = ani.frames[subFrameId];
     if (!frame) return false;
-    playMovieSubGaniSounds(ani, frame, state, frameId, itemId);
+    playMovieSubGaniSounds(ani, frame, state, subFrameId, itemId);
     const previousAnimation = currentAnimation;
     const previousDefaults = ani.defaultImages;
     ani.defaultImages = new Map(previousDefaults);
@@ -2252,12 +2481,14 @@ function drawMovieSubGani(ctx, ani, state, frameId, itemId = null) {
     ctx.save();
     ctx.translate(state.dx || 0, state.dy || 0);
     try {
-        const dir = Math.max(0, Math.min(3, state.dir ?? 2));
+        const dir = state.dir === undefined ? 2 : state.dir;
+        if (dir < 0 || dir >= frame.pieces.length) return true;
         const actualDir = ani.singleDir ? 0 : dir;
+        if (actualDir >= frame.pieces.length) return true;
         for (const piece of frame.pieces[actualDir] || []) {
             if (piece.type !== "sprite") continue;
             const sprite = ani.getAniSprite(piece.spriteIndex, piece.spriteName);
-            if (sprite) drawSpriteCached(ctx, sprite, piece.xoffset, piece.yoffset);
+            if (sprite) drawAniPiece(ctx, sprite, piece);
         }
         return true;
     } finally {
@@ -2388,30 +2619,100 @@ function drawMoviePlayText(ctx, text, x, y, size = 20, baseline = "middle") {
     ctx.restore();
 }
 
+function drawMovieText(ctx, state) {
+    const style = getMovieTextStyle(state);
+    if (!style.text) return;
+    const x = state.dx || 0;
+    const y = state.dy || 0;
+    ctx.save();
+    ctx.font = movieTextFont(style);
+    ctx.textAlign = style.centered ? "center" : style.rightaligned ? "right" : "left";
+    ctx.textBaseline = "middle";
+    if (style.shaded) {
+        ctx.shadowColor = "rgba(20,40,200,1)";
+        ctx.shadowOffsetX = 2;
+        ctx.shadowOffsetY = 2;
+        ctx.shadowBlur = 0;
+    }
+    ctx.fillStyle = style.color;
+    const lines = style.wordwrap ? wrapMovieText(ctx, style.text, 240) : [style.text];
+    const lineHeight = style.fontSize * 1.15;
+    const firstY = y - ((lines.length - 1) * lineHeight) / 2;
+    lines.forEach((line, index) => ctx.fillText(line, x, firstY + index * lineHeight));
+    if (style.underline || style.strikeout) {
+        ctx.shadowColor = "transparent";
+        ctx.shadowOffsetX = 0;
+        ctx.shadowOffsetY = 0;
+        ctx.strokeStyle = style.color;
+        ctx.lineWidth = 1;
+        lines.forEach((line, index) => {
+            const width = ctx.measureText(line).width;
+            const left = style.centered ? x - width / 2 : style.rightaligned ? x - width : x;
+            if (style.underline) {
+                ctx.beginPath();
+                ctx.moveTo(left, firstY + index * lineHeight + style.fontSize * 0.55);
+                ctx.lineTo(left + width, firstY + index * lineHeight + style.fontSize * 0.55);
+                ctx.stroke();
+            }
+            if (style.strikeout) {
+                ctx.beginPath();
+                ctx.moveTo(left, firstY + index * lineHeight);
+                ctx.lineTo(left + width, firstY + index * lineHeight);
+                ctx.stroke();
+            }
+        });
+    }
+    ctx.restore();
+}
+
+function wrapMovieText(ctx, text, maxWidth) {
+    const words = String(text).split(/\s+/).filter(Boolean);
+    if (!words.length) return [""];
+    const lines = [];
+    let line = words[0];
+    for (let i = 1; i < words.length; i++) {
+        const candidate = line + " " + words[i];
+        if (ctx.measureText(candidate).width <= maxWidth) line = candidate;
+        else { lines.push(line); line = words[i]; }
+    }
+    lines.push(line);
+    return lines;
+}
+
+function playMovieSoundTrack(item, state, frameId) {
+    if (!isPlaying || _isExportRender || !state.soundShown || !state.soundFile) return;
+    const key = [item.id, "sound", Math.floor(frameId), state.soundFile].join(":");
+    if (movieSoundFrameKeys.has(key)) return;
+    movieSoundFrameKeys.add(key);
+    playGaniSound(state.soundFile);
+}
+
 function drawMovieFrame(ctx, frameId) {
     if (!currentAnimation?.isMovieMode) return;
     const labels = [];
     const actorBounds = [];
     const items = (currentAnimation.movieItems || [])
         .map(item => ({item, state: getMovieItemState(item, frameId)}))
-        .filter(entry => entry.state && entry.state.visible !== false)
+        .filter(entry => entry.state && (entry.state.visible !== false || (entry.item.kind || "").toUpperCase() === "SOUND"))
         .sort((a, b) => (a.state.layer || 0) - (b.state.layer || 0) || a.item.id - b.item.id);
     for (const {item, state} of items) {
         const kind = (item.kind || "").toUpperCase();
-        if (kind === "SOUND" || item.type === "sound") continue;
+        if (kind === "SOUND" || item.type === "sound") {
+            playMovieSoundTrack(item, state, frameId);
+            continue;
+        }
         if (kind === "TEXT" || item.type === "text") {
-            const style = getMovieTextStyle(state);
-            labels.push({text: style.text, x: state.dx || 0, y: state.dy || 0, size: style.fontSize, baseline: "middle"});
+            drawMovieText(ctx, state);
         } else if (kind === "SPRITE") {
-            const spriteIndex = state.spriteIndex ?? state["sprite #"] ?? 0;
-            const sprite = currentAnimation.getAniSprite(spriteIndex, "");
+            const spriteIndex = state.spriteIndex ?? state["sprite #"];
+            const sprite = spriteIndex === undefined ? null : currentAnimation.getAniSprite(spriteIndex, "");
             if (sprite) drawSpriteCached(ctx, sprite, state.dx || 0, state.dy || 0);
         } else {
             const dx = state.dx || 0;
             const dy = state.dy || 0;
             const dir = Math.max(0, Math.min(3, state.dir ?? item.direction ?? 2));
             const subAni = getMovieActorGani(state);
-            const drewSubGani = subAni && drawMovieSubGani(ctx, subAni, state, frameId, item.id);
+            const drewSubGani = subAni && drawMovieSubGani(ctx, subAni, state, frameId, item.id, item);
             if (!drewSubGani) {
                 const walkStep = state.ani === "walk" ? (Math.floor(frameId / 2) % 5) : -1;
                 const bodyCandidates = walkStep >= 0 ? [204 + walkStep * 4 + dir, 260 + walkStep * 4 + dir, 260 + dir, 200 + dir] : [200 + dir, 260 + dir, 264 + dir];
@@ -2470,7 +2771,7 @@ function recordMovieDragFrame(item, wx, wy) {
         dx,
         dy,
         dir,
-        ani: autoGani && item.type === "actor" && movedEnough ? "walk" : (prev.ani || item.ani || "idle"),
+        ani: autoGani && (item.kind || "").toUpperCase() === "CHAR" && movedEnough ? "walk" : (prev.ani || item.ani || "idle"),
         visible: prev.visible !== false,
         layer: prev.layer ?? item.layer ?? 1,
         name: prev.name || item.name,
@@ -2763,6 +3064,20 @@ function drawTimeline() {
         timelineCtx.fillText(`${frame.duration} ms`, x + frameWidth / 2, headerHeight + buttonHeight - 16);
         currentX += frameWidth;
     }
+    if (currentAnimation.isMovieMode) {
+        const keyColors = ["#4472C4", "#C0504D", "#9BBB59", "#8064A2", "#4BACC6", "#F79646"];
+        const items = currentAnimation.movieItems || [];
+        for (let itemIndex = 0; itemIndex < items.length; itemIndex++) {
+            const times = movieKeyTimes(items[itemIndex]);
+            for (const time of times) {
+                if (time < 0 || time >= currentAnimation.frames.length) continue;
+                let keyX = 2 - timelineScrollX;
+                for (let frameIndex = 0; frameIndex < time; frameIndex++) keyX += Math.max(currentAnimation.frames[frameIndex].duration * pixelsPerMs, minFrameWidth);
+                timelineCtx.fillStyle = keyColors[itemIndex % keyColors.length];
+                timelineCtx.fillRect(keyX + 3, headerHeight + 2, 3, 7);
+            }
+        }
+    }
     if (isDraggingFrame && dragFrame >= 0 && dragFrame < currentAnimation.frames.length) {
         const frame = currentAnimation.frames[dragFrame];
         const frameWidth = Math.max(frame.duration * pixelsPerMs, minFrameWidth);
@@ -3010,49 +3325,49 @@ function parseGani(text) {
         const words = line.split(/\s+/).filter(w => w);
         if (words.length === 0) { i++; continue; }
         const word1 = words[0];
-        if (word1 === "SPRITE" && words.length >= 7) {
+        if (word1 === "SPRITE" && words.length >= 6) {
             const sprite = new AniSprite();
-            sprite.index = parseInt(words[1]) || 0;
+            sprite.index = ganiInt(words[1]);
             sprite.type = words[2];
             if (sprite.type === "BODY") ani.m_containsBodySprite = true;
             else if (isCustomImageType(sprite.type)) {
                 sprite.customImageName = sprite.type;
                 sprite.type = "CUSTOM";
             }
-            sprite.left = parseInt(words[3]) || 0;
-            sprite.top = parseInt(words[4]) || 0;
-            sprite.width = parseInt(words[5]) || 32;
-            sprite.height = parseInt(words[6]) || 32;
-            sprite.comment = words.slice(7).join(" ") || "New Sprite";
+            sprite.left = ganiInt(words[3]);
+            sprite.top = ganiInt(words[4]);
+            sprite.width = Math.max(0, ganiInt(words[5]));
+            sprite.height = Math.max(0, ganiInt(words[6]));
+            sprite.comment = words.slice(7).join(" ");
             sprite.boundingBox = {x: 0, y: 0, width: sprite.width, height: sprite.height};
             sprite.updateBoundingBox();
             ani.addSprite(sprite);
         } else if (word1 === "STRETCHXEFFECT" && words.length >= 3) {
-            const sprite = ani.getAniSprite(parseInt(words[1]), "");
+            const sprite = ani.getAniSprite(ganiInt(words[1]), "");
             if (sprite) {
-                sprite.xscale = parseFloat(words[2]) || 1.0;
+                sprite.xscale = ganiFloat(words[2]);
                 sprite.updateBoundingBox();
                 if (DEBUG_MODE) f12Log(`Loaded STRETCHXEFFECT for sprite ${words[1]}: ${sprite.xscale}`);
             }
         } else if (word1 === "STRETCHYEFFECT" && words.length >= 3) {
-            const sprite = ani.getAniSprite(parseInt(words[1]), "");
+            const sprite = ani.getAniSprite(ganiInt(words[1]), "");
             if (sprite) {
-                sprite.yscale = parseFloat(words[2]) || 1.0;
+                sprite.yscale = ganiFloat(words[2]);
                 sprite.updateBoundingBox();
                 if (DEBUG_MODE) f12Log(`Loaded STRETCHYEFFECT for sprite ${words[1]}: ${sprite.yscale}`);
             }
         } else if (word1 === "ROTATEEFFECT" && words.length >= 3) {
-            const sprite = ani.getAniSprite(parseInt(words[1]), "");
+            const sprite = ani.getAniSprite(ganiInt(words[1]), "");
             if (sprite) {
-                sprite.rotation = parseFloat(words[2]) * 180 / Math.PI;
+                sprite.rotation = ganiFloat(words[2]) * 180 / Math.PI;
                 sprite.updateBoundingBox();
                 if (DEBUG_MODE) f12Log(`Loaded ROTATEEFFECT for sprite ${words[1]}: ${sprite.rotation}`);
             }
         } else if ((word1 === "ATTACHSPRITE" || word1 === "ATTACHSPRITE2") && words.length >= 5) {
             const behind = word1 === "ATTACHSPRITE2";
-            const parent = ani.getAniSprite(parseInt(words[1]), "");
+            const parent = ani.getAniSprite(ganiInt(words[1]), "");
             if (parent) {
-                const attach = {index: parseInt(words[2]), offset: {x: parseFloat(words[3]), y: parseFloat(words[4])}};
+                const attach = {index: ganiInt(words[2]), offset: {x: ganiInt(words[3]), y: ganiInt(words[4])}};
                 if (behind) {
                     parent.attachedSprites.splice(parent.m_drawIndex, 0, attach);
                     parent.m_drawIndex++;
@@ -3061,38 +3376,47 @@ function parseGani(text) {
                 }
             }
         } else if (word1 === "COLOREFFECT" && words.length >= 6) {
-            const sprite = ani.getAniSprite(parseInt(words[1]), "");
+            const sprite = ani.getAniSprite(ganiInt(words[1]), "");
             if (sprite) {
                 sprite.colorEffectEnabled = true;
                 sprite.colorEffect = {
-                    r: Math.floor(parseFloat(words[2]) * 255),
-                    g: Math.floor(parseFloat(words[3]) * 255),
-                    b: Math.floor(parseFloat(words[4]) * 255),
-                    a: Math.floor(parseFloat(words[5]) * 255)
+                    r: Math.floor(ganiFloat(words[2]) * 255),
+                    g: Math.floor(ganiFloat(words[3]) * 255),
+                    b: Math.floor(ganiFloat(words[4]) * 255),
+                    a: Math.floor(ganiFloat(words[5]) * 255)
                 };
             }
         } else if (word1 === "ZOOMEFFECT" && words.length >= 3) {
-            const sprite = ani.getAniSprite(parseInt(words[1]), "");
+            const sprite = ani.getAniSprite(ganiInt(words[1]), "");
             if (sprite) {
-                sprite.xscale = sprite.yscale = parseFloat(words[2]) || 1.0;
+                sprite._zoom = ganiFloat(words[2]);
                 sprite.updateBoundingBox();
-                if (DEBUG_MODE) f12Log(`Loaded ZOOMEFFECT for sprite ${words[1]}: ${sprite.xscale}`);
+                if (DEBUG_MODE) f12Log(`Loaded ZOOMEFFECT for sprite ${words[1]}: ${sprite._zoom}`);
             }
         } else if (word1 === "EFFECTMODE" && words.length >= 3) {
-            const sprite = ani.getAniSprite(parseInt(words[1]), "");
+            const sprite = ani.getAniSprite(ganiInt(words[1]), "");
             if (sprite) {
-                const modeValue = parseInt(words[2]);
-                sprite.mode = isNaN(modeValue) ? undefined : modeValue;
+                const modeValue = ganiInt(words[2]);
+                sprite.mode = modeValue < 0 ? undefined : modeValue;
                 if (DEBUG_MODE) f12Log(`Loaded EFFECTMODE for sprite ${words[1]}: ${sprite.mode}`);
             }
+        } else if (word1 === "LAYER" && words.length >= 2) {
+            ani.layer = ganiInt(words[1]);
+            ani.hasLayer = true;
+        } else if (word1 === "ANTIALIAS") {
+            ani.antialias = true;
+        } else if (word1 === "ROTATEPROJECTILE") {
+            ani.rotateProjectile = true;
         } else if (word1 === "LOOP") {
             ani.looped = true;
         } else if (word1 === "CONTINUOUS") {
             ani.continous = true;
         } else if (word1 === "FRAMES" && words.length >= 2) {
-            ani.frameCount = Math.max(1, parseInt(words[1]) || 100);
+            ani.frameCount = Math.max(1, ganiInt(words[1]));
         } else if (word1 === "SETBACKTO" && words.length >= 2) {
             ani.nextAni = words[1];
+        } else if (word1 === "SETBACKTO") {
+            ani.nextAni = "";
         } else if (word1 === "SINGLEDIR" || word1 === "SINGLEDIRECTION") {
             ani.singleDir = true;
             dirCount = 1;
@@ -3111,7 +3435,7 @@ function parseGani(text) {
                 if (!line) { i++; continue; }
                 if (line.startsWith("WAIT")) {
                     if (ani.frames.length > 0) {
-                        const delay = parseFloat(line.substring(4).trim()) || 0;
+                        const delay = ganiInt(line.substring(4).trim());
                         ani.frames[ani.frames.length - 1].duration += delay * 50;
                     }
                     i++;
@@ -3120,11 +3444,12 @@ function parseGani(text) {
                 if (line.startsWith("PLAYSOUND")) {
                     if (ani.frames.length > 0) {
                         const parts = line.split(/\s+/).filter(p => p);
-                        if (parts.length >= 4) {
+                        if (parts.length >= 2) {
                             const sound = new FramePieceSound();
                             sound.fileName = parts[1];
-                            sound.xoffset = parseFloat(parts[2]) * 16;
-                            sound.yoffset = parseFloat(parts[3]) * 16;
+                            sound.xoffset = (parts.length >= 3 ? ganiFloat(parts[2]) : 1.5) * 16;
+                            sound.yoffset = (parts.length >= 4 ? ganiFloat(parts[3]) : 2.0) * 16;
+                            sound.tag = Math.max(1, Math.round(ani.frames[ani.frames.length - 1].duration / 50));
                             ani.frames[ani.frames.length - 1].sounds.push(sound);
                         }
                     }
@@ -3132,16 +3457,14 @@ function parseGani(text) {
                     continue;
                 }
                 if (ani.singleDir) {
-                    if (!origLine.startsWith(" ")) {
+                    if (!/^[ \t]/.test(origLine)) {
                         i++;
                         continue;
                     }
                     const frame = new Frame();
                     let frameLeft = 0, frameTop = 0, frameRight = 0, frameBottom = 0;
-                    const offsets = line.split(",").filter(o => o.trim());
-                    for (const offset of offsets) {
-                        const piece = parseFramePiece(offset);
-                        if (!piece) continue;
+                    const pieces = parseFramePieces(line, ani);
+                    for (const piece of pieces) {
                         if (piece.xoffset < left) left = piece.xoffset;
                         if (piece.yoffset < top) top = piece.yoffset;
                         if (piece.xoffset < frameLeft) frameLeft = piece.xoffset;
@@ -3162,17 +3485,15 @@ function parseGani(text) {
                     }
                     i++;
                 } else {
-                    if (!origLine.startsWith(" ") && line) {
+                    if (!/^[ \t]/.test(origLine) && line) {
                         i++;
                         continue;
                     }
                     const dirPieces = [];
                     let frameLeft = 0, frameTop = 0, frameRight = 0, frameBottom = 0;
                     if (line) {
-                        const offsets = line.split(",").filter(o => o.trim());
-                        for (const offset of offsets) {
-                            const piece = parseFramePiece(offset);
-                            if (!piece) continue;
+                        const pieces = parseFramePieces(line, ani);
+                        for (const piece of pieces) {
                             if (piece.xoffset < left) left = piece.xoffset;
                             if (piece.yoffset < top) top = piece.yoffset;
                             if (piece.xoffset < frameLeft) frameLeft = piece.xoffset;
@@ -3187,7 +3508,7 @@ function parseGani(text) {
                             dirPieces.push(piece);
                         }
                     }
-                    newFrame.push({pieces: dirPieces, boundingBox: {x: frameLeft, y: frameTop, width: frameRight - frameLeft, height: frameBottom - frameTop}});
+                    if (dirPieces.length > 0) newFrame.push({pieces: dirPieces, boundingBox: {x: frameLeft, y: frameTop, width: frameRight - frameLeft, height: frameBottom - frameTop}});
                     if (newFrame.length >= 4) {
                         const frame = new Frame();
                         let combinedLeft = Infinity, combinedTop = Infinity, combinedRight = -Infinity, combinedBottom = -Infinity;
@@ -3222,7 +3543,7 @@ function parseGani(text) {
                     i++;
                 }
             }
-            if (newFrame.length > 0 && !ani.singleDir) {
+            if (newFrame.length >= 4 && !ani.singleDir) {
                 const frame = new Frame();
                 let combinedLeft = Infinity, combinedTop = Infinity, combinedRight = -Infinity, combinedBottom = -Infinity;
                 for (let dir = 0; dir < newFrame.length; dir++) {
@@ -3285,10 +3606,10 @@ function parseGani(text) {
                     item = new MovieItem(kind.toLowerCase(), ani.movieItems.length);
                     item.kind = MOVIE_ACTOR_KINDS.includes(kind) ? kind : "CHAR";
                     item.name = name;
-                    if (item.kind === "TEXT") item.text = name;
+                    if (item.kind === "TEXT") item.text = "";
                     ani.movieItems.push(item);
                 } else if (movieWords[0] === "FRAME" && item && movieWords.length >= 3) {
-                    const frameId = Math.max(0, parseInt(movieWords[1]) || 0);
+                    const frameId = Math.max(0, ganiInt(movieWords[1]));
                     const stateText = movieLine.replace(/^FRAME\s+\S+\s+/i, "");
                     const state = parseMovieFrameState(stateText);
                     item.setFrame(frameId, state);
@@ -3306,32 +3627,25 @@ function parseGani(text) {
 }
 
 function isCustomImageType(type) {
-    const internalTypes = ["HEAD", "BODY", "SWORD", "SHIELD", "SPRITES", "HORSE", "PICS",
-        "ATTR1", "ATTR2", "ATTR3", "ATTR4", "ATTR5", "ATTR6", "ATTR7", "ATTR8", "ATTR9", "ATTR10",
-        "ATTR11", "ATTR12", "ATTR13", "ATTR14", "ATTR15", "ATTR16", "ATTR17", "ATTR18", "ATTR19",
-        "PARAM1", "PARAM2", "PARAM3", "PARAM4", "PARAM5", "PARAM6", "PARAM7", "PARAM8", "PARAM9", "PARAM10"];
-    return !internalTypes.includes(type);
+    if (["HEAD", "BODY", "SWORD", "SHIELD", "SPRITES", "HORSE", "PICS"].includes(type)) return false;
+    return !/^(?:ATTR|PARAM)\d+$/.test(type);
 }
 
 function saveGani(ani) {
     let output = ani.isMovieMode ? "GANI0002\n" : "GANI0001\n";
     const otherCommands = [];
     for (const sprite of ani.sprites.values()) {
-        output += `SPRITE ${String(sprite.index).padStart(4)} ${(sprite.type === "CUSTOM" ? sprite.customImageName : sprite.type).padEnd(15)} ${String(sprite.left).padStart(4)} ${String(sprite.top).padStart(4)} ${String(sprite.width).padStart(4)} ${String(sprite.height).padStart(4)} ${sprite.comment}\n`;
+        output += `SPRITE ${String(sprite.index).padStart(4)} ${(sprite.type === "CUSTOM" ? (sprite.customImageName || "SPRITES") : sprite.type).padEnd(15)} ${String(sprite.left).padStart(4)} ${String(sprite.top).padStart(4)} ${String(sprite.width).padStart(4)} ${String(sprite.height).padStart(4)} ${sprite.comment}\n`;
         let attachIndex = 0;
         for (const attached of sprite.attachedSprites) {
             const cmd = attachIndex < sprite.m_drawIndex ? "ATTACHSPRITE2" : "ATTACHSPRITE";
             otherCommands.push(`${cmd} ${String(sprite.index).padStart(4)} ${String(attached.index).padStart(4)} ${String(Math.floor(attached.offset.x)).padStart(4)} ${String(Math.floor(attached.offset.y)).padStart(4)}`);
             attachIndex++;
         }
-        const _sz = sprite._zoom || 1.0;
-        const effX = sprite.xscale * _sz, effY = sprite.yscale * _sz;
-        if (effX === effY && effX !== 1.0) {
-            otherCommands.push(`ZOOMEFFECT ${String(sprite.index).padStart(4)} ${effX}`);
-        } else {
-            if (effX !== 1.0) otherCommands.push(`STRETCHXEFFECT ${String(sprite.index).padStart(4)} ${effX}`);
-            if (effY !== 1.0) otherCommands.push(`STRETCHYEFFECT ${String(sprite.index).padStart(4)} ${effY}`);
-        }
+        const zoom = sprite._zoom === undefined ? 1.0 : sprite._zoom;
+        if (zoom !== 1.0) otherCommands.push(`ZOOMEFFECT ${String(sprite.index).padStart(4)} ${zoom}`);
+        if (sprite.xscale !== 1.0) otherCommands.push(`STRETCHXEFFECT ${String(sprite.index).padStart(4)} ${sprite.xscale}`);
+        if (sprite.yscale !== 1.0) otherCommands.push(`STRETCHYEFFECT ${String(sprite.index).padStart(4)} ${sprite.yscale}`);
         if (sprite.rotation !== 0.0) {
             otherCommands.push(`ROTATEEFFECT ${String(sprite.index).padStart(4)} ${sprite.rotation * Math.PI / 180}`);
             if (DEBUG_MODE) f12Log(`Saving ROTATEEFFECT for sprite ${sprite.index}: ${sprite.rotation}`);
@@ -3344,18 +3658,21 @@ function saveGani(ani) {
             otherCommands.push(`COLOREFFECT ${String(sprite.index).padStart(4)} ${sprite.colorEffect.r/255} ${sprite.colorEffect.g/255} ${sprite.colorEffect.b/255} ${sprite.colorEffect.a/255}`);
         }
     }
-    if (ani.isMovieMode) output += `FRAMES ${Math.max(1, ani.frameCount || ani.frames.length || 100)}\n`;
+    if (ani.isMovieMode || (ani.frameCount && ani.frameCount !== 100)) output += `FRAMES ${Math.max(1, ani.frameCount || ani.frames.length || 100)}\n`;
     for (const [type, value] of ani.defaultImages) {
         output += `DEFAULT${type} ${value}\n`;
     }
     if (ani.looped) output += "LOOP\n";
     if (ani.continous) output += "CONTINUOUS\n";
     if (ani.nextAni) output += `SETBACKTO ${ani.nextAni}\n`;
-    if (ani.singleDir && !ani.isMovieMode) output += "SINGLEDIR\n";
+    if (ani.hasLayer) output += `LAYER ${ani.layer}\n`;
+    if (ani.antialias) output += "ANTIALIAS\n";
+    if (ani.rotateProjectile) output += "ROTATEPROJECTILE\n";
+    if (ani.singleDir && !ani.isMovieMode) output += "SINGLEDIRECTION\n";
     for (const cmd of otherCommands) output += cmd + "\n";
     if (ani.isMovieMode) {
         output += "MOVIE\n";
-        const items = (ani.movieItems || []).slice().sort((a, b) => (a.layer || 0) - (b.layer || 0) || a.id - b.id);
+        const items = (ani.movieItems || []).slice().sort((a, b) => a.id - b.id);
         items.forEach((item, index) => {
             if (index > 0) output += "\n";
             const kind = (item.kind || (item.type === "text" ? "TEXT" : item.type === "sprite" ? "SPRITE" : "CHAR")).toUpperCase();
@@ -3391,13 +3708,14 @@ function saveGani(ani) {
                 }
             }
         }
-        for (const sound of frame.sounds) {
+        const totalWaits = Math.max(0, Math.floor((frame.duration - 50) / 50));
+        let emittedWaits = 0;
+        for (const sound of [...frame.sounds].sort((a, b) => (a.tag || 1) - (b.tag || 1))) {
+            const tag = sound.tag || 1;
+            while (emittedWaits < tag - 1 && emittedWaits < totalWaits) { output += "WAIT 1\n"; emittedWaits++; }
             output += `PLAYSOUND ${sound.fileName} ${sound.xoffset/16} ${sound.yoffset/16}\n`;
         }
-        if (frame.duration !== 50) {
-            const waitCount = Math.floor((frame.duration - 50) / 50);
-            if (waitCount > 0) output += `WAIT ${waitCount}\n`;
-        }
+        while (emittedWaits < totalWaits) { output += "WAIT 1\n"; emittedWaits++; }
         output += "\n";
     }
     output += "ANIEND\n";
@@ -4164,6 +4482,12 @@ function updateSpriteEditor() {
 
     spriteEditPanel.style.display = "block";
     spriteID.value = spriteTargets.map(sprite => sprite.index).join(", ");
+    if (spriteSource && primarySprite.type && !Array.from(spriteSource.options).some(option => option.value === primarySprite.type)) {
+        const option = document.createElement("option");
+        option.value = primarySprite.type;
+        option.textContent = primarySprite.type;
+        spriteSource.appendChild(option);
+    }
     spriteSource.value = primarySprite.type;
     const spriteSourceWrapper = spriteSource?.closest(".custom-dropdown-wrapper");
     if (spriteSourceWrapper) {
@@ -4740,9 +5064,14 @@ function updateAnimationSettings() {
     const singleDirCheckbox = $("singleDirCheckbox");
     const loopedCheckbox = $("loopedCheckbox");
     const continousCheckbox = $("continousCheckbox");
+    const antialiasCheckbox = $("antialiasCheckbox");
+    const rotateProjectileCheckbox = $("rotateProjectileCheckbox");
     if (singleDirCheckbox) singleDirCheckbox.textContent = currentAnimation.singleDir ? "✓" : " ";
     if (loopedCheckbox) loopedCheckbox.textContent = currentAnimation.looped ? "✓" : " ";
     if (continousCheckbox) continousCheckbox.textContent = currentAnimation.continous ? "✓" : " ";
+    if (antialiasCheckbox) antialiasCheckbox.textContent = currentAnimation.antialias ? "✓" : " ";
+    if (rotateProjectileCheckbox) rotateProjectileCheckbox.textContent = currentAnimation.rotateProjectile ? "✓" : " ";
+    if ($("aniLayer")) $("aniLayer").value = currentAnimation.layer || 0;
     $("nextAni").value = currentAnimation.nextAni;
     updateMovieModeUI();
 }
@@ -4773,6 +5102,8 @@ function ensureMovieModeUI() {
         <div style="display:flex;gap:4px;margin-bottom:6px;">
             <button id="btnAddMovieActor" style="flex:1;" title="Add Actor"><svg viewBox="0 0 16 16" width="14" height="14" aria-hidden="true" style="display:block;margin:auto;fill:currentColor;"><path d="M6 7a3 3 0 1 0 0-6 3 3 0 0 0 0 6z"></path><path d="M1 15c0-3 2-5 5-5s5 2 5 5H1z"></path><path d="M12 5h2v3h3v2h-3v3h-2v-3H9V8h3V5z"></path></svg></button>
             <button id="btnAddMovieText" style="flex:1;" title="Add Text"><svg viewBox="0 0 16 16" width="14" height="14" aria-hidden="true" style="display:block;margin:auto;fill:currentColor;"><path d="M3 2h10v3h-2l-.3-1H9v9h1.5v2h-5v-2H7V4H5.3L5 5H3V2z"></path></svg></button>
+            <button id="btnAddMovieSprite" style="flex:1;" title="Add Sprite">S</button>
+            <button id="btnAddMovieSound" style="flex:1;" title="Add Sound">♪</button>
             <button id="btnDeleteMovieItem" style="flex:1;" title="Delete"><i class="fas fa-trash"></i></button>
         </div>
         <label style="display:block;margin:6px 0 3px;">Frames:</label>
@@ -4780,6 +5111,14 @@ function ensureMovieModeUI() {
         <label style="display:flex;align-items:center;gap:8px;margin:6px 0;"><span id="movieAutoGaniSetting" class="custom-checkbox">✓</span> Automatic Gani Setting</label>
         <label style="display:block;margin:8px 0 3px;">Selected:</label>
         <select id="movieItemsCombo" style="width:100%;margin-bottom:8px;"><option value="">(none)</option></select>
+        <div style="display:flex;gap:4px;margin-bottom:6px;">
+            <button id="btnMoviePrevKey" style="flex:1;" title="Previous Key">&lt;</button>
+            <button id="btnMovieAddKey" style="flex:1;" title="Add Key">+</button>
+            <button id="btnMovieDeleteKey" style="flex:1;" title="Delete Key">-</button>
+            <button id="btnMovieNextKey" style="flex:1;" title="Next Key">&gt;</button>
+        </div>
+        <label style="display:block;margin:6px 0 3px;">Kind:</label>
+        <select id="movieItemKind"><option value="CHAR">CHAR</option><option value="SPRITE">SPRITE</option><option value="SOUND">SOUND</option><option value="TEXT">TEXT</option></select>
         <label style="display:block;margin:6px 0 3px;">Name/Text:</label>
         <input type="text" id="movieItemName">
         <label style="display:block;margin:6px 0 3px;">Ani:</label>
@@ -4790,13 +5129,42 @@ function ensureMovieModeUI() {
         <select id="movieItemDir"><option value="0">up</option><option value="1">left</option><option value="2">down</option><option value="3">right</option></select>
         <label style="display:block;margin:6px 0 3px;">Layer:</label>
         <input type="number" id="movieItemLayer" value="1">
-        <label style="display:flex;align-items:center;gap:8px;margin-top:6px;"><span id="movieItemVisible" class="custom-checkbox">✓</span> Visible</label>
+        <label style="display:flex;align-items:center;gap:8px;margin-top:6px;"><span id="movieItemVisible" class="custom-checkbox"> </span> Visible</label>
         <label style="display:flex;align-items:center;gap:8px;margin-top:6px;"><span id="movieItemPlayerLook" class="custom-checkbox"> </span> Player Look</label>
+        <div id="movieSpriteFields" style="margin-top:8px;">
+            <label style="display:block;margin:6px 0 3px;">Sprite #:</label>
+            <input type="number" id="movieItemSprite">
+        </div>
+        <div id="movieSoundFields" style="margin-top:8px;">
+            <label style="display:block;margin:6px 0 3px;">Sound File:</label>
+            <input type="text" id="movieItemFile">
+        </div>
+        <div id="movieTextFields" style="margin-top:8px;">
+            <label style="display:block;margin:6px 0 3px;">Text:</label>
+            <input type="text" id="movieItemText">
+            <div style="display:grid;grid-template-columns:1fr 1fr;gap:4px 6px;">
+                <label style="display:block;font-size:11px;">Font<input id="movieItemFont" type="text" style="width:100%;box-sizing:border-box;"></label>
+                <label style="display:block;font-size:11px;">Color<input id="movieItemColor" type="text" style="width:100%;box-sizing:border-box;"></label>
+                <label style="display:block;font-size:11px;">Zoom<input id="movieItemZoom" type="number" step="0.1" style="width:100%;box-sizing:border-box;"></label>
+            </div>
+            <div style="display:grid;grid-template-columns:1fr 1fr 1fr;gap:2px 6px;margin-top:4px;font-size:11px;">
+                <label><span id="movieItemBold" class="custom-checkbox"> </span> Bold</label>
+                <label><span id="movieItemItalic" class="custom-checkbox"> </span> Italic</label>
+                <label><span id="movieItemCentered" class="custom-checkbox"> </span> Centered</label>
+                <label><span id="movieItemRightAligned" class="custom-checkbox"> </span> Right</label>
+                <label><span id="movieItemUnderline" class="custom-checkbox"> </span> Underline</label>
+                <label><span id="movieItemStrikeout" class="custom-checkbox"> </span> Strikeout</label>
+                <label><span id="movieItemWordWrap" class="custom-checkbox"> </span> Wrap</label>
+                <label><span id="movieItemShaded" class="custom-checkbox"> </span> Shaded</label>
+            </div>
+        </div>
         <div id="movieAppearanceFields" style="display:grid;grid-template-columns:1fr 1fr;gap:4px 6px;margin-top:8px;"></div>
     `;
     rightPanel.insertBefore(group, rightPanel.firstChild);
     document.getElementById("btnAddMovieActor").onclick = () => addMovieItem("actor");
     document.getElementById("btnAddMovieText").onclick = () => addMovieItem("text");
+    document.getElementById("btnAddMovieSprite").onclick = () => addMovieItem("sprite");
+    document.getElementById("btnAddMovieSound").onclick = () => addMovieItem("sound");
     const btnAddMovieActorBottom = document.getElementById("btnAddMovieActorBottom");
     const btnAddMovieTextBottom = document.getElementById("btnAddMovieTextBottom");
     if (btnAddMovieActorBottom) btnAddMovieActorBottom.onclick = () => addMovieItem("actor");
@@ -4846,19 +5214,30 @@ function ensureMovieModeUI() {
     };
     const appearanceBox = document.getElementById("movieAppearanceFields");
     if (appearanceBox) appearanceBox.innerHTML = MOVIE_APPEARANCE_FIELDS.map(key => '<label style="display:block;font-size:11px;">' + key + '<input id="movieLook_' + key + '" type="text" style="width:100%;box-sizing:border-box;"></label>').join("");
-    for (const id of ["movieItemName", "movieItemAni", "movieItemChat", "movieItemDir", "movieItemLayer", ...MOVIE_APPEARANCE_FIELDS.map(key => "movieLook_" + key)]) {
+    for (const id of ["movieItemKind", "movieItemName", "movieItemAni", "movieItemChat", "movieItemDir", "movieItemLayer", "movieItemSprite", "movieItemFile", "movieItemText", "movieItemFont", "movieItemColor", "movieItemZoom", ...MOVIE_APPEARANCE_FIELDS.map(key => "movieLook_" + key)]) {
         document.getElementById(id).onchange = applyMoviePanelChanges;
     }
+    document.getElementById("btnMoviePrevKey").onclick = () => gotoMovieKey(-1);
+    document.getElementById("btnMovieNextKey").onclick = () => gotoMovieKey(1);
+    document.getElementById("btnMovieAddKey").onclick = () => addMovieKey();
+    document.getElementById("btnMovieDeleteKey").onclick = () => deleteMovieKey();
     document.getElementById("movieItemVisible").onclick = () => {
         if (!selectedMovieItem) return;
-        const state = getMovieItemState(selectedMovieItem, currentFrame) || selectedMovieItem.getFrame(currentFrame);
-        setMovieItemFrameAttrs(selectedMovieItem, {visible: state.visible === false});
+        const key = selectedMovieItem.frames.get(currentFrame) || {};
+        setMovieItemFrameAttrs(selectedMovieItem, {visible: key.visible !== true});
     };
     document.getElementById("movieItemPlayerLook").onclick = () => {
         if (!selectedMovieItem) return;
-        const state = getMovieItemState(selectedMovieItem, currentFrame) || selectedMovieItem.getFrame(currentFrame);
-        setMovieItemFrameAttrs(selectedMovieItem, {playerlook: state.playerlook !== true});
+        const key = selectedMovieItem.frames.get(currentFrame) || {};
+        setMovieItemFrameAttrs(selectedMovieItem, {playerlook: key.playerlook !== true});
     };
+    for (const id of ["movieItemBold", "movieItemItalic", "movieItemCentered", "movieItemRightAligned", "movieItemUnderline", "movieItemStrikeout", "movieItemWordWrap", "movieItemShaded"]) {
+        document.getElementById(id).onclick = () => {
+            const el = document.getElementById(id);
+            el.textContent = el.textContent.trim() === "✓" ? " " : "✓";
+            applyMoviePanelChanges();
+        };
+    }
 }
 
 function updateMovieModeUI() {
@@ -4878,40 +5257,59 @@ function updateMovieModeUI() {
     if (!enabled) return;
     const combo = root.querySelector("#movieItemsCombo");
     if (combo) {
-        const itemsInFrame = (currentAnimation.movieItems || []).map(item => ({item, state: getMovieItemState(item, currentFrame)})).filter(entry => entry.state);
-        const selectedId = selectedMovieItem && itemsInFrame.some(entry => entry.item === selectedMovieItem) ? String(selectedMovieItem.id) : (combo.value && itemsInFrame.some(entry => String(entry.item.id) === combo.value) ? combo.value : "");
+        const entries = (currentAnimation.movieItems || []).map(item => ({item, state: getMovieItemState(item, currentFrame)}));
+        const selectedId = selectedMovieItem && entries.some(entry => entry.item === selectedMovieItem) ? String(selectedMovieItem.id) : (combo.value && entries.some(entry => String(entry.item.id) === combo.value) ? combo.value : "");
         combo.innerHTML = '<option value="">(none)</option>';
-        for (const entry of itemsInFrame) {
+        for (const entry of entries) {
             const item = entry.item;
-            const state = entry.state;
             const opt = document.createElement("option");
             opt.value = String(item.id);
-            opt.textContent = movieActorLabel(item) + " " + item.id + ": " + (state?.name || item.name);
+            opt.textContent = movieActorLabel(item) + " " + item.id + ": " + (entry.state?.name || item.name);
             if (opt.value === selectedId) opt.selected = true;
             combo.appendChild(opt);
         }
-        selectedMovieItem = itemsInFrame.find(entry => String(entry.item.id) === combo.value)?.item || null;
+        selectedMovieItem = entries.find(entry => String(entry.item.id) === combo.value)?.item || null;
     }
     const frameCount = document.getElementById("movieFrameCount");
     if (frameCount) frameCount.value = currentAnimation.frameCount || currentAnimation.frames.length || 100;
     const autoGani = root.querySelector("#movieAutoGaniSetting");
     if (autoGani) autoGani.textContent = localStorage.getItem("movieAutoGaniSetting") !== "false" ? "✓" : " ";
     const state = selectedMovieItem ? getMovieItemState(selectedMovieItem, currentFrame) : null;
-    for (const id of ["movieItemName", "movieItemAni", "movieItemChat", "movieItemDir", "movieItemLayer", ...MOVIE_APPEARANCE_FIELDS.map(key => "movieLook_" + key)]) {
+    const key = selectedMovieItem ? (selectedMovieItem.frames.get(currentFrame) || {}) : {};
+    for (const id of ["movieItemKind", "movieItemName", "movieItemAni", "movieItemChat", "movieItemDir", "movieItemLayer", "movieItemSprite", "movieItemFile", "movieItemText", "movieItemFont", "movieItemColor", "movieItemZoom", ...MOVIE_APPEARANCE_FIELDS.map(key => "movieLook_" + key)]) {
         const el = document.getElementById(id);
-        if (el) el.disabled = !state;
+        if (el) el.disabled = !selectedMovieItem;
     }
-    if (document.getElementById("movieItemName")) document.getElementById("movieItemName").value = state ? (((selectedMovieItem.kind || "").toUpperCase() === "TEXT" || selectedMovieItem.type === "text") ? (state.text || state.name || "") : (state.name || selectedMovieItem.name || "")) : "";
+    const kind = (selectedMovieItem?.kind || "CHAR").toUpperCase();
+    if (document.getElementById("movieItemKind")) document.getElementById("movieItemKind").value = kind;
+    if (document.getElementById("movieItemName")) document.getElementById("movieItemName").value = selectedMovieItem ? (kind === "TEXT" ? (state?.text || "") : (state?.name || selectedMovieItem.name || "")) : "";
     if (document.getElementById("movieItemAni")) document.getElementById("movieItemAni").value = state?.ani || "";
     if (document.getElementById("movieItemChat")) document.getElementById("movieItemChat").value = state?.chat || "";
-    if (document.getElementById("movieItemDir")) document.getElementById("movieItemDir").value = String(state?.dir ?? 2);
-    if (document.getElementById("movieItemLayer")) document.getElementById("movieItemLayer").value = state?.layer ?? 1;
+    if (document.getElementById("movieItemDir")) document.getElementById("movieItemDir").value = String(key.dir !== undefined ? key.dir : (selectedMovieItem?.dir ?? 2));
+    if (document.getElementById("movieItemLayer")) document.getElementById("movieItemLayer").value = key.layer !== undefined ? key.layer : (selectedMovieItem?.layer ?? 1);
+    if (document.getElementById("movieItemSprite")) document.getElementById("movieItemSprite").value = state?.spriteIndex ?? "";
+    if (document.getElementById("movieItemFile")) document.getElementById("movieItemFile").value = state?.soundFile || (state?.attrs || {}).file || "";
+    if (document.getElementById("movieItemText")) document.getElementById("movieItemText").value = state?.text || "";
+    if (document.getElementById("movieItemFont")) document.getElementById("movieItemFont").value = state?.font || "";
+    if (document.getElementById("movieItemColor")) document.getElementById("movieItemColor").value = state?.color || "";
+    if (document.getElementById("movieItemZoom")) document.getElementById("movieItemZoom").value = state?.textZoom ?? 1;
+    const styleFlags = {movieItemBold: "bold", movieItemItalic: "italic", movieItemCentered: "centered", movieItemRightAligned: "rightaligned", movieItemUnderline: "underline", movieItemStrikeout: "strikeout", movieItemWordWrap: "wordwrap", movieItemShaded: "shaded"};
+    for (const [id, flag] of Object.entries(styleFlags)) {
+        const el = document.getElementById(id);
+        if (el) el.textContent = state?.[flag] === true ? "✓" : " ";
+    }
+    const spriteFields = document.getElementById("movieSpriteFields");
+    if (spriteFields) spriteFields.style.display = kind === "SPRITE" ? "" : "none";
+    const soundFields = document.getElementById("movieSoundFields");
+    if (soundFields) soundFields.style.display = kind === "SOUND" ? "" : "none";
+    const textFields = document.getElementById("movieTextFields");
+    if (textFields) textFields.style.display = kind === "TEXT" ? "" : "none";
     for (const key of MOVIE_APPEARANCE_FIELDS) {
         const el = document.getElementById("movieLook_" + key);
         if (el) el.value = state ? (key === "head" || key === "body" ? (state[key] || "") : ((state.attrs || {})[key] || "")) : "";
     }
     const visible = document.getElementById("movieItemVisible");
-    if (visible) visible.textContent = !state || state.visible !== false ? "✓" : " ";
+    if (visible) visible.textContent = state?.visible === true ? "✓" : " ";
     const playerLook = document.getElementById("movieItemPlayerLook");
     if (playerLook) playerLook.textContent = state?.playerlook === true ? "✓" : " ";
 }
@@ -4951,10 +5349,15 @@ function addMovieItem(type = "actor", pushUndo = true) {
     const oldState = pushUndo ? serializeAnimationState() : null;
     const nextId = (currentAnimation.movieItems || []).reduce((max, item) => Math.max(max, item.id), -1) + 1;
     const item = new MovieItem(type, nextId);
-    item.kind = type === "text" ? "TEXT" : "CHAR";
+    item.kind = type === "text" ? "TEXT" : type === "sprite" ? "SPRITE" : type === "sound" ? "SOUND" : "CHAR";
     item.dx = type === "text" ? 0 : -16;
     item.dy = type === "text" ? -32 : -24;
-    item.setFrame(currentFrame, {dx: item.dx, dy: item.dy, text: item.text, name: item.name, ani: item.ani, dir: item.dir, visible: item.visible, layer: item.layer});
+    const key = {dx: item.dx, dy: item.dy, name: item.name, dir: item.dir, visible: true, layer: item.layer};
+    if (item.kind === "TEXT") Object.assign(key, {text: item.text, font: "Tempus Sans ITC", color: "FFFFFF", zoom: 1, bold: false, italic: false, centered: false, rightaligned: false, underline: false, strikeout: false, wordwrap: true, shaded: true});
+    else Object.assign(key, {ani: item.ani, chat: item.chat});
+    if (item.kind === "SPRITE") key.spriteIndex = 0;
+    if (item.kind === "SOUND") key.attrs = {file: ""};
+    item.setFrame(currentFrame, key);
     currentAnimation.movieItems.push(item);
     selectedMovieItem = item;
     selectedPieces.clear();
@@ -4983,6 +5386,62 @@ function deleteSelectedMovieItem() {
     saveSession();
 }
 
+function movieKeyTimes(item) {
+    return item ? Array.from(item.frames.keys()).map(Number).sort((a, b) => a - b) : [];
+}
+
+function gotoMovieKey(direction) {
+    if (!selectedMovieItem) return;
+    const times = movieKeyTimes(selectedMovieItem);
+    const target = direction < 0
+        ? times.filter(time => time < currentFrame).pop()
+        : times.find(time => time > currentFrame);
+    if (target === undefined) return;
+    currentFrame = target;
+    updateFrameInfo();
+    updateMovieModeUI();
+    redraw();
+    drawTimeline();
+}
+
+function addMovieKey() {
+    if (!selectedMovieItem) return;
+    const state = getMovieItemState(selectedMovieItem, currentFrame) || selectedMovieItem;
+    const kind = (selectedMovieItem.kind || "CHAR").toUpperCase();
+    const key = {
+        visible: state.visible === true,
+        dx: Math.round(state.dx || 0),
+        dy: Math.round(state.dy || 0),
+        layer: selectedMovieItem.frames.get(currentFrame)?.layer ?? (selectedMovieItem.layer ?? 1)
+    };
+    if (kind === "TEXT") {
+        key.text = state.text || "";
+        key.font = state.font || "";
+        key.color = state.color || "FFFFFF";
+        key.zoom = state.textZoom ?? 1;
+        for (const flag of ["bold", "italic", "centered", "rightaligned", "underline", "strikeout", "wordwrap", "shaded"]) key[flag] = state[flag] === true;
+    } else {
+        key.ani = state.ani || "";
+        key.chat = state.chat || "";
+        key.dir = state.dir ?? 2;
+    }
+    if (kind === "SPRITE") key.spriteIndex = state.spriteIndex ?? 0;
+    if (kind === "SOUND") key.attrs = {...(state.attrs || {}), file: state.soundFile || ""};
+    setMovieItemFrameAttrs(selectedMovieItem, key);
+}
+
+function deleteMovieKey() {
+    if (!selectedMovieItem || !selectedMovieItem.frames.has(currentFrame)) return;
+    const oldState = serializeAnimationState();
+    selectedMovieItem.frames.delete(currentFrame);
+    const newState = serializeAnimationState();
+    addUndoCommand({description: "Delete Movie Key", oldState, newState, undo: () => restoreAnimationState(oldState), redo: () => restoreAnimationState(newState)});
+    updateMovieModeUI();
+    redraw();
+    drawTimeline();
+    saveSession();
+}
+
 function setMovieItemFrameAttrs(item, attrs, pushUndo = true) {
     if (!currentAnimation || !item) return;
     const oldState = pushUndo ? serializeAnimationState() : null;
@@ -5004,25 +5463,39 @@ function setMovieItemFrameAttrs(item, attrs, pushUndo = true) {
 
 function applyMoviePanelChanges() {
     if (!selectedMovieItem) return;
-    const name = document.getElementById("movieItemName")?.value || selectedMovieItem.name;
+    const item = selectedMovieItem;
+    const kind = (document.getElementById("movieItemKind")?.value || "CHAR").toUpperCase();
+    item.kind = kind;
+    item.type = kind === "TEXT" ? "text" : kind === "SPRITE" ? "sprite" : kind === "SOUND" ? "sound" : "actor";
+    const name = document.getElementById("movieItemName")?.value || item.name;
     const attrs = {
         name,
-        ani: document.getElementById("movieItemAni")?.value || "",
-        chat: document.getElementById("movieItemChat")?.value || "",
-        dir: parseInt(document.getElementById("movieItemDir")?.value || "2") || 0,
-        layer: parseInt(document.getElementById("movieItemLayer")?.value || "1") || 0,
-        playerlook: document.getElementById("movieItemPlayerLook")?.textContent === "✓"
+        dir: ganiInt(document.getElementById("movieItemDir")?.value || "2"),
+        layer: ganiInt(document.getElementById("movieItemLayer")?.value || "1")
     };
+    if (kind === "TEXT") {
+        attrs.text = document.getElementById("movieItemText")?.value || "";
+        attrs.font = document.getElementById("movieItemFont")?.value || "";
+        attrs.color = document.getElementById("movieItemColor")?.value || "";
+        attrs.zoom = ganiFloat(document.getElementById("movieItemZoom")?.value || "1");
+        const flagIds = {bold: "movieItemBold", italic: "movieItemItalic", centered: "movieItemCentered", rightaligned: "movieItemRightAligned", underline: "movieItemUnderline", strikeout: "movieItemStrikeout", wordwrap: "movieItemWordWrap", shaded: "movieItemShaded"};
+        for (const [flag, id] of Object.entries(flagIds)) attrs[flag] = document.getElementById(id)?.textContent.trim() === "✓";
+        item.text = attrs.text;
+    } else {
+        attrs.ani = document.getElementById("movieItemAni")?.value || "";
+        attrs.chat = document.getElementById("movieItemChat")?.value || "";
+    }
+    if (kind === "SPRITE") attrs.spriteIndex = ganiInt(document.getElementById("movieItemSprite")?.value || "0");
+    if (kind === "SOUND") attrs.attrs = {...((getMovieItemState(item, currentFrame) || {}).attrs || {}), file: document.getElementById("movieItemFile")?.value || ""};
     const extraAttrs = {};
     for (const key of MOVIE_APPEARANCE_FIELDS) {
         const value = document.getElementById("movieLook_" + key)?.value || "";
         if (key === "head" || key === "body") attrs[key] = value;
         else if (value) extraAttrs[key] = value;
     }
-    attrs.attrs = {...((getMovieItemState(selectedMovieItem, currentFrame) || {}).attrs || {}), ...extraAttrs};
-    for (const key of MOVIE_APPEARANCE_FIELDS) if (key !== "head" && key !== "body" && !document.getElementById("movieLook_" + key)?.value) delete attrs.attrs[key];
-    if (selectedMovieItem.type === "text") attrs.text = name;
-    setMovieItemFrameAttrs(selectedMovieItem, attrs);
+    attrs.attrs = {...((getMovieItemState(item, currentFrame) || {}).attrs || {}), ...(attrs.attrs || {}), ...extraAttrs};
+    for (const key of MOVIE_APPEARANCE_FIELDS) if (key !== "head" && key !== "body" && key !== "file" && !document.getElementById("movieLook_" + key)?.value) delete attrs.attrs[key];
+    setMovieItemFrameAttrs(item, attrs);
 }
 
 function updateDefaultsTable() {
@@ -5041,7 +5514,9 @@ function updateDefaultsTable() {
     }
     f12Log("updateDefaultsTable: currentAnimation.defaultImages: " + JSON.stringify(Array.from(currentAnimation.defaultImages.entries())));
     tbody.innerHTML = "";
-    const defaults = ["HEAD", "BODY", "SWORD", "SHIELD", "HORSE", "PICS", "SPRITES", "ATTR1", "ATTR2", "ATTR3", "ATTR4", "ATTR5", "ATTR6", "ATTR7", "ATTR8", "ATTR9", "ATTR10", "PARAM1", "PARAM2", "PARAM3", "PARAM4", "PARAM5", "PARAM6", "PARAM7", "PARAM8", "PARAM9", "PARAM10"];
+    const defaults = ["HEAD", "BODY", "SWORD", "SHIELD", "HORSE", "PICS", "SPRITES",
+        ...Array.from({length: 30}, (_, i) => `ATTR${i + 1}`),
+        ...Array.from({length: 30}, (_, i) => `PARAM${i + 1}`)];
     for (const key of defaults) {
         const defaultValue = currentAnimation.getDefaultImageName(key);
         f12Log(`Default for ${key}: "${defaultValue}"`);
@@ -5463,6 +5938,10 @@ function serializeAnimationState() {
     const state = {
         isMovieMode: currentAnimation.isMovieMode || false,
         frameCount: currentAnimation.frameCount || currentAnimation.frames.length || 100,
+        layer: currentAnimation.layer || 0,
+        hasLayer: !!currentAnimation.hasLayer,
+        antialias: !!currentAnimation.antialias,
+        rotateProjectile: !!currentAnimation.rotateProjectile,
         movieItems: (currentAnimation.movieItems || []).map(item => ({
             id: item.id,
             type: item.type,
@@ -5511,7 +5990,8 @@ function serializeAnimationState() {
             sounds: (f.sounds || []).map(s => ({
                 fileName: s.fileName,
                 xoffset: s.xoffset,
-                yoffset: s.yoffset
+                yoffset: s.yoffset,
+                tag: s.tag || 1
             })),
             duration: f.duration
         })),
@@ -5552,6 +6032,10 @@ function restoreAnimationState(state) {
     f12Log(`restoreAnimationState: restoring ${state.frames?.length || 0} frames, ${state.sprites?.length || 0} sprites`);
     currentAnimation.isMovieMode = !!state.isMovieMode;
     currentAnimation.frameCount = state.frameCount || state.frames?.length || 100;
+    currentAnimation.layer = state.layer || 0;
+    currentAnimation.hasLayer = !!state.hasLayer;
+    currentAnimation.antialias = !!state.antialias;
+    currentAnimation.rotateProjectile = !!state.rotateProjectile;
     currentAnimation.movieItems = (state.movieItems || []).map(itemData => {
         const item = new MovieItem(itemData.type || "actor", itemData.id || 0);
         const kind = (itemData.kind || (itemData.type === "text" ? "TEXT" : itemData.type === "sprite" ? "SPRITE" : itemData.type === "sound" ? "SOUND" : "CHAR")).toUpperCase();
@@ -5607,6 +6091,7 @@ function restoreAnimationState(state) {
             sound.fileName = sData.fileName;
             sound.xoffset = sData.xoffset;
             sound.yoffset = sData.yoffset;
+            sound.tag = sData.tag || 1;
             return sound;
         });
         return frame;
@@ -8178,6 +8663,7 @@ async function initGaniEditorStartup() {
         } else {
             isPlaying = true;
             movieSoundFrameKeys.clear();
+            playedFrameSoundTags.clear();
             if (playPosition <= 0 && currentAnimation) {
                 playPosition = 0;
                 for (let i = 0; i < currentFrame && i < currentAnimation.frames.length; i++) playPosition += currentAnimation.frames[i].duration;
@@ -8194,6 +8680,7 @@ async function initGaniEditorStartup() {
         playPosition = 0;
         moviePlaybackFrame = null;
         currentFrame = 0;
+        playedFrameSoundTags.clear();
         stopAllSounds();
         $("btnPlay").innerHTML = '<i class="fas fa-play"></i>';
         redraw();
@@ -9351,6 +9838,29 @@ async function initGaniEditorStartup() {
             saveSession();
         };
     }
+    const antialiasCheckbox = $("antialiasCheckbox");
+    if (antialiasCheckbox) {
+        antialiasCheckbox.onclick = () => {
+            currentAnimation.antialias = !currentAnimation.antialias;
+            antialiasCheckbox.textContent = currentAnimation.antialias ? "✓" : " ";
+            saveSession();
+        };
+    }
+    const rotateProjectileCheckbox = $("rotateProjectileCheckbox");
+    if (rotateProjectileCheckbox) {
+        rotateProjectileCheckbox.onclick = () => {
+            currentAnimation.rotateProjectile = !currentAnimation.rotateProjectile;
+            rotateProjectileCheckbox.textContent = currentAnimation.rotateProjectile ? "✓" : " ";
+            saveSession();
+        };
+    }
+    if ($("aniLayer")) {
+        $("aniLayer").onchange = (e) => {
+            currentAnimation.layer = ganiInt(e.target.value);
+            currentAnimation.hasLayer = true;
+            saveSession();
+        };
+    }
     $("nextAni").onchange = (e) => {
         currentAnimation.nextAni = e.target.value;
         saveSession();
@@ -9562,6 +10072,8 @@ async function initGaniEditorStartup() {
                     newSprite.rotation = sprite.rotation || 0.0;
                     newSprite.xscale = sprite.xscale || 1.0;
                     newSprite.yscale = sprite.yscale || 1.0;
+                    newSprite._zoom = sprite._zoom !== undefined ? sprite._zoom : 1.0;
+                    newSprite.mode = sprite.mode;
                     newSprite.colorEffectEnabled = sprite.colorEffectEnabled || false;
                     newSprite.colorEffect = sprite.colorEffect ? {...sprite.colorEffect} : {r: 255, g: 255, b: 255, a: 255};
                     newSprite.m_drawIndex = sprite.m_drawIndex || 0;
@@ -9605,8 +10117,11 @@ async function initGaniEditorStartup() {
             rotation: editingSprite.rotation,
             xscale: editingSprite.xscale,
             yscale: editingSprite.yscale,
+            _zoom: editingSprite._zoom ?? 1.0,
+            mode: editingSprite.mode,
             colorEffect: editingSprite.colorEffectEnabled ? `rgba(${editingSprite.colorEffect.r},${editingSprite.colorEffect.g},${editingSprite.colorEffect.b},${editingSprite.colorEffect.a})` : "",
             comment: editingSprite.comment,
+            drawIndex: editingSprite.m_drawIndex,
             attachments: editingSprite.attachedSprites.map(a => ({index: a.index, x: a.offset.x, y: a.offset.y}))
         };
         _spriteClipboard = data;
@@ -9630,6 +10145,8 @@ async function initGaniEditorStartup() {
             sprite.rotation = data.rotation || 0;
             sprite.xscale = data.xscale || 1.0;
             sprite.yscale = data.yscale || 1.0;
+            sprite._zoom = data._zoom !== undefined ? data._zoom : 1.0;
+            sprite.mode = data.mode;
             sprite.colorEffectEnabled = !!data.colorEffect;
             if (data.colorEffect) {
                 const match = data.colorEffect.match(/rgba?\((\d+),(\d+),(\d+),?(\d*\.?\d*)?\)/);
@@ -13751,7 +14268,10 @@ function playAnimation(now) {
     playStartTime = now;
     playPosition += delta;
     let totalDuration = 0;
-    for (const frame of currentAnimation.frames) totalDuration += frame.duration;
+    const movieFrameCount = Math.max(1, currentAnimation.frameCount || currentAnimation.frames.length || 1);
+    const movieLastFrame = currentAnimation.isMovieMode ? (currentAnimation.looped ? movieFrameCount : movieFrameCount - 1) : 0;
+    if (currentAnimation.isMovieMode) totalDuration = (movieLastFrame + 1) * 50;
+    else for (const frame of currentAnimation.frames) totalDuration += frame.duration;
     if (totalDuration === 0) {
         isPlaying = false;
         $("btnPlay").innerHTML = '<i class="fas fa-play"></i>';
@@ -13760,6 +14280,7 @@ function playAnimation(now) {
     if (playPosition >= totalDuration) {
         if (currentAnimation.looped) {
             playPosition = playPosition % totalDuration;
+            playedFrameSoundTags.clear();
         } else {
             isPlaying = false;
             playPosition = 0;
@@ -13770,99 +14291,44 @@ function playAnimation(now) {
         }
     }
     let accumulated = 0;
+    let frameStart = 0;
     let newFrame = currentFrame;
     let fractionalFrame = currentFrame;
-    for (let i = 0; i < currentAnimation.frames.length; i++) {
-        if (playPosition < accumulated + currentAnimation.frames[i].duration) {
-            newFrame = i;
-            fractionalFrame = i + ((playPosition - accumulated) / Math.max(currentAnimation.frames[i].duration, 1));
-            break;
+    if (currentAnimation.isMovieMode) {
+        fractionalFrame = Math.min(movieLastFrame, playPosition / 50);
+        newFrame = Math.min(currentAnimation.frames.length - 1, Math.floor(fractionalFrame));
+    } else {
+        for (let i = 0; i < currentAnimation.frames.length; i++) {
+            if (playPosition < accumulated + currentAnimation.frames[i].duration) {
+                newFrame = i;
+                frameStart = accumulated;
+                fractionalFrame = i + ((playPosition - accumulated) / Math.max(currentAnimation.frames[i].duration, 1));
+                break;
+            }
+            accumulated += currentAnimation.frames[i].duration;
         }
-        accumulated += currentAnimation.frames[i].duration;
     }
     if (currentAnimation.isMovieMode) moviePlaybackFrame = fractionalFrame;
     if (newFrame !== currentFrame) {
         currentFrame = newFrame;
-        const frame = currentAnimation.getFrame(currentFrame);
-        if (frame && frame.sounds && frame.sounds.length > 0) {
-            for (const sound of frame.sounds) {
-                try {
-                    let soundPath = sound.fileName;
-                    const audioExtensions = [".wav", ".mp3", ".ogg", ".m4a"];
-                    const commonSubdirs = ["sounds", "sound", "music", "audio", "sfx", "fx"];
-                    const baseName = soundPath;
-                    const hasExt = /\.\w+$/.test(baseName);
-                    const pathsToTry = [];
-                    if (soundLibrary.has(baseName.toLowerCase())) {
-                        const audio = soundLibrary.get(baseName.toLowerCase());
-                        audio.currentTime = 0;
-                        activeAudioElements.add(audio);
-                        audio.play().catch(() => {});
-                        continue;
-                    }
-                    if (!soundPath.includes("/") && !soundPath.includes("\\")) {
-                        pathsToTry.push("sounds/" + baseName);
-                        if (!hasExt) {
-                            for (const ext of audioExtensions) {
-                                pathsToTry.push("sounds/" + baseName + ext);
-                            }
-                        }
-                        if (typeof workingDirectory !== 'undefined' && workingDirectory) {
-                            pathsToTry.push(workingDirectory + "/" + baseName);
-                            if (!hasExt) {
-                                for (const ext of audioExtensions) {
-                                    pathsToTry.push(workingDirectory + "/" + baseName + ext);
-                                }
-                            }
-                            for (const subdir of commonSubdirs) {
-                                pathsToTry.push(workingDirectory + "/" + subdir + "/" + baseName);
-                                if (!hasExt) {
-                                    for (const ext of audioExtensions) {
-                                        pathsToTry.push(workingDirectory + "/" + subdir + "/" + baseName + ext);
-                                    }
-                                }
-                            }
-                        }
-                    } else {
-                        pathsToTry.push(soundPath);
-                    }
-                    let audioLoaded = false;
-                    let currentIndex = 0;
-                    const audio = new Audio();
-                    audio.volume = 0.5;
-                    activeAudioElements.add(audio);
-                    audio.onended = () => {
-                        activeAudioElements.delete(audio);
-                    };
-                    audio.onerror = () => {
-                        if (!audioLoaded && currentIndex < pathsToTry.length) {
-                            const path = pathsToTry[currentIndex++];
-                            audio.src = path;
-                            audio.load();
-                        }
-                    };
-                    audio.oncanplaythrough = () => {
-                        if (!audioLoaded) {
-                            audioLoaded = true;
-                            audio.play().catch(() => {});
-                        }
-                    };
-                    audio.onloadeddata = () => {
-                        if (!audioLoaded) {
-                            audioLoaded = true;
-                            audio.play().catch(() => {});
-                        }
-                    };
-                    if (pathsToTry.length > 0) {
-                        audio.src = pathsToTry[currentIndex++];
-                        audio.load();
-                    }
-                } catch (e) {}
-            }
-        }
+        playedFrameSoundTags.clear();
         redraw();
         updateFrameInfo();
         drawTimeline();
+    }
+    if (!currentAnimation.isMovieMode) {
+        const frame = currentAnimation.getFrame(currentFrame);
+        if (frame) {
+            const tick = Math.max(1, Math.floor((playPosition - frameStart) / 50) + 1);
+            for (const sound of frame.sounds || []) {
+                const tag = sound.tag || 1;
+                if (tag !== tick) continue;
+                const key = `${currentFrame}:${tag}:${sound.fileName}`;
+                if (playedFrameSoundTags.has(key)) continue;
+                playedFrameSoundTags.add(key);
+                playGaniSound(sound.fileName);
+            }
+        }
     }
     if (currentAnimation.isMovieMode) redraw();
     if (isPlaying) {
@@ -14721,7 +15187,7 @@ function showAddSpriteDialog(editSprite = null, preSelectImage = null) {
     row1.style.alignItems = "center";
     row1.style.gap = "4px";
     const borderTopLeft = dialogColors.border === "#0a0a0a" ? "#404040" : dialogColors.border;
-    row1.innerHTML = `<label style="width:100px;font-size:12px;flex-shrink:0;color:${dialogColors.text};text-shadow:0 0 2px rgba(0,0,0,0.8);user-select:none;-webkit-user-select:none;-moz-user-select:none;-ms-user-select:none;cursor:default;">Image Source:</label><select id="addSpriteSource" style="flex:1;min-width:0;background:${dialogColors.inputBg};color:${dialogColors.text};border:1px solid ${dialogColors.border};border-top:1px solid ${borderTopLeft};border-left:1px solid ${borderTopLeft};padding:4px;font-size:12px;font-family:${fontFamily};box-shadow:inset 0 1px 0 rgba(0,0,0,0.3);"><option>CUSTOM</option><option>SPRITES</option><option>BODY</option><option>HEAD</option><option>SWORD</option><option>SHIELD</option><option>HORSE</option><option>PICS</option><option>ATTR1</option><option>ATTR2</option><option>ATTR3</option><option>ATTR4</option><option>ATTR5</option><option>ATTR6</option><option>ATTR7</option><option>ATTR8</option><option>ATTR9</option><option>ATTR10</option><option>PARAM1</option><option>PARAM2</option><option>PARAM3</option><option>PARAM4</option><option>PARAM5</option><option>PARAM6</option><option>PARAM7</option><option>PARAM8</option><option>PARAM9</option><option>PARAM10</option></select>`;
+    row1.innerHTML = `<label style="width:100px;font-size:12px;flex-shrink:0;color:${dialogColors.text};text-shadow:0 0 2px rgba(0,0,0,0.8);user-select:none;-webkit-user-select:none;-moz-user-select:none;-ms-user-select:none;cursor:default;">Image Source:</label><select id="addSpriteSource" style="flex:1;min-width:0;background:${dialogColors.inputBg};color:${dialogColors.text};border:1px solid ${dialogColors.border};border-top:1px solid ${borderTopLeft};border-left:1px solid ${borderTopLeft};padding:4px;font-size:12px;font-family:${fontFamily};box-shadow:inset 0 1px 0 rgba(0,0,0,0.3);"><option>CUSTOM</option><option>SPRITES</option><option>BODY</option><option>HEAD</option><option>SWORD</option><option>SHIELD</option><option>HORSE</option><option>PICS</option><option>ATTR1</option><option>ATTR2</option><option>ATTR3</option><option>ATTR4</option><option>ATTR5</option><option>ATTR6</option><option>ATTR7</option><option>ATTR8</option><option>ATTR9</option><option>ATTR10</option><option>ATTR11</option><option>ATTR12</option><option>ATTR13</option><option>ATTR14</option><option>ATTR15</option><option>ATTR16</option><option>ATTR17</option><option>ATTR18</option><option>ATTR19</option><option>PARAM1</option><option>PARAM2</option><option>PARAM3</option><option>PARAM4</option><option>PARAM5</option><option>PARAM6</option><option>PARAM7</option><option>PARAM8</option><option>PARAM9</option><option>PARAM10</option></select>`;
     const row2 = document.createElement("div");
     row2.style.display = "flex";
     row2.style.alignItems = "center";

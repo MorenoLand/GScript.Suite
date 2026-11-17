@@ -23,3 +23,4 @@ build/android/overlay.json
 build/ios/
 build/darwin/Assets.car
 build/linux/GSuite.desktop
+*_test.go

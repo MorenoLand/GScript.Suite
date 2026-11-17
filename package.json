@@ -1,6 +1,6 @@
 {
   "name": "gsuite",
-  "version": "0.1.85",
+  "version": "0.1.86",
   "description": "GSuite - A web-based suite of tools for development.",
   "main": "anieditor.js",
   "packageManager": "pnpm@10.14.0",
@@ -13,6 +13,7 @@
     "wails:assets": "pnpm run wails:bindings && node js/build-web.js",
     "build:wails": "node js/build-web.js",
     "start": "node server.js",
+    "test": "node --test \"tests/**/*.test.js\"",
     "wails": "wails3"
   },
   "repository": {

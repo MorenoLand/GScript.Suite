@@ -13,6 +13,8 @@ function debugLog(...args) { if (PARTICLE_DEBUG) console.log(...args); }
 function normalizeParticleOptions(options = {}) {
   return {
     assetBaseUrl: options.assetBaseUrl || "images/",
+    playSound: options.playSound,
+    soundBaseUrl: options.soundBaseUrl,
     x: options.x ?? options.ownerX ?? options.thiso?.x ?? 24,
     y: options.y ?? options.ownerY ?? options.thiso?.y ?? 24,
     env: options.env || {},
@@ -314,6 +316,14 @@ function drawStaticImage(ctx, item, img) {
 
 class Particle {
   constructor(template) {
+    // movementvector = {x, y, z} sets the move* properties
+    if (template.movementvector && template.movex === undefined && template.movey === undefined && template.movez === undefined) {
+      template = {...template, movex: template.movementvector.x, movey: template.movementvector.y, movez: template.movementvector.z};
+    }
+    // what a particle shows besides a picture: words (text) or corners in tiles (polygon, x y pairs); sound is played when it is made
+    this.text = template.text || "";
+    this.polygon = Array.isArray(template.polygon) ? template.polygon : null;
+    this.sound = template.sound || "";
     this.x = 0;
     this.y = 0;
     this.z = 0;
@@ -517,7 +527,34 @@ class Particle {
     this.vy = -this.speed * Math.sin(this.angle) * Math.cos(this.zangle);
     this.vz = this.speed * Math.sin(this.zangle);
   }
+  // a text or polygon particle: drawn where a picture would be, in the particle's colour
+  drawShape(ctx) {
+    const px = this.x * WORLD_TILE_SIZE;
+    const py = (this.y - this.z) * WORLD_TILE_SIZE;
+    ctx.save();
+    ctx.globalAlpha = clamp(this.a, 0, 1);
+    ctx.globalCompositeOperation = particleCompositeOperation(this.mode, this.a);
+    ctx.fillStyle = `rgb(${Math.round(clamp(this.r, 0, 1) * 255)}, ${Math.round(clamp(this.g, 0, 1) * 255)}, ${Math.round(clamp(this.b, 0, 1) * 255)})`;
+    ctx.translate(px, py);
+    ctx.rotate(-this.rotation);
+    ctx.scale(this.zoom * this.stretchx, this.zoom * this.stretchy);
+    if (this.polygon && this.polygon.length >= 6) {
+      ctx.beginPath();
+      ctx.moveTo(this.polygon[0] * WORLD_TILE_SIZE, this.polygon[1] * WORLD_TILE_SIZE);
+      for (let i = 2; i + 1 < this.polygon.length; i += 2) ctx.lineTo(this.polygon[i] * WORLD_TILE_SIZE, this.polygon[i + 1] * WORLD_TILE_SIZE);
+      ctx.closePath();
+      ctx.fill();
+    } else if (this.text) {
+      ctx.textBaseline = "top";
+      ctx.fillText(this.text, 0, 0);
+    }
+    ctx.restore();
+  }
   draw(ctx, img, fastColor) {
+    if (!img && (this.text || this.polygon)) {
+      this.drawShape(ctx);
+      return;
+    }
     if (!img) {
       debugLog('Particle.draw: no image provided');
       return;
@@ -585,6 +622,26 @@ class Emitter {
     this.canvasHeight = config.canvasHeight || 600;
     this.templateTime = 0;
     this.updateEmitter = typeof config.updateEmitter === "function" ? config.updateEmitter : null;
+    // isfrozen stops the emitter and its particles; advancetime(seconds) lets the effect run ahead before it is first shown
+    this.isfrozen = !!config.isfrozen;
+    // playSound(names, x, y) is called with a particle type's sound list when one of its particles is made
+    this.playSound = typeof config.playSound === "function" ? config.playSound : null;
+    this.emittedparticles = 0;
+    this.pendingAdvance = config.advancetime > 0 ? config.advancetime : 0;
+  }
+  get currentparticlecount() {
+    return this.activeParticles.length;
+  }
+  advanceTime(seconds) {
+    if (seconds > 0) this.pendingAdvance += seconds;
+  }
+  removeParticles() {
+    this.activeParticles.length = 0;
+  }
+  removeModifiers() {
+    this.modifiers.length = 0;
+    this.templateModifiers.length = 0;
+    this.activeParticles.length = 0;
   }
   processTemplateModifiers(deltaTime) {
     if (!this.templateModifiers.length) return;
@@ -627,6 +684,7 @@ class Emitter {
   spawnDropEmitter(config, p) {
     const dropEmitter = new Emitter({
       ...config,
+      playSound: this.playSound,
       x: p.x,
       y: p.y,
       canvasWidth: this.canvasWidth,
@@ -647,16 +705,17 @@ class Emitter {
     const templates = [];
     const templateLimit = Math.max(1, Math.min(this.particletypes, this.particles.length));
     for (let i = 0; i < templateLimit; i++) {
-      if (this.particles[i] && this.particles[i].image) templates.push(this.particles[i]);
+      if (this.particles[i] && (this.particles[i].image || this.particles[i].text || this.particles[i].polygon)) templates.push(this.particles[i]);
     }
     for (let i = 0; i < emitCount; i++) {
       const templateIndex = templates.length > 1 ? Math.floor(Math.random() * templates.length) : 0;
       const template = templates[templateIndex] || this.particles[0] || {};
-      if (!template.image) {
+      if (!template.image && !template.text && !template.polygon) {
         debugLog('Particle template', templateIndex, 'has no image, available templates:', this.particles.map((p, idx) => ({idx, image: p.image})));
         continue;
       }
       const p = new Particle(template);
+      if (p.sound && this.playSound) this.playSound(p.sound, this.x, this.y);
       if (this.movementfactor === 0) {
         p.x = this.x + this.emissionoffset.x * this.particlelifetime;
         p.y = this.y + this.emissionoffset.y * this.particlelifetime;
@@ -725,6 +784,7 @@ class Emitter {
         if (preAge > 0) p.update(preAge, this.particlelifetime);
       }
       this.activeParticles.unshift(p);
+      this.emittedparticles++;
       if (this.activeParticles.length === 1) {
         debugLog(`Emitted first particle: image=${p.image}, x=${p.x}, y=${p.y}, alpha=${p.a}, lifetime=${p.lifetime}, speed=${p.speed}, angle=${p.angle}, vx=${p.vx}, vy=${p.vy}`);
         debugLog(`Particle modifiers (${p.modifiers.length}):`, p.modifiers.map(m => `${m.type}:${m.attribute}:${m.operation}:${m.isGlobal ? 'global' : 'local'}`));
@@ -734,6 +794,12 @@ class Emitter {
     }
   }
   update(deltaTime, currentTime) {
+    if (this.pendingAdvance > 0) {
+      const total = this.pendingAdvance;
+      this.pendingAdvance = 0;
+      for (let ran = 0; ran < total; ran += MAX_FRAME_DELTA) this.update(Math.min(MAX_FRAME_DELTA, total - ran), currentTime + ran);
+    }
+    if (this.isfrozen) return;
     if (this.updateEmitter) this.updateEmitter(this, currentTime);
     this.processTemplateModifiers(deltaTime);
     for (let i = this.dropemitters.length - 1; i >= 0; i--) {
@@ -777,10 +843,11 @@ class Emitter {
       }
       
       const nextZ = p.z + p.vz * deltaTime;
-      const hitTerrain = this.checkbelowterrain && p.z > 0 && nextZ <= 0;
-      if ((p.dropemitter || p.dropwateremitter) && hitTerrain && p.age < p.lifetime) {
+      // as in the client, a particle that reaches the ground ends there whether or not a drop emitter answers it
+      const hitTerrain = this.checkbelowterrain && nextZ <= 0;
+      if (hitTerrain && p.age < p.lifetime) {
         p.z = 0;
-        this.spawnDropEmitter(p.dropwateremitter || p.dropemitter, p);
+        if (p.dropemitter || p.dropwateremitter) this.spawnDropEmitter(p.dropwateremitter || p.dropemitter, p);
         this.activeParticles.splice(i, 1);
         i--;
         continue;
@@ -880,6 +947,10 @@ class Emitter {
       const particles = this.firstinfront ? [...this.activeParticles].reverse() : this.activeParticles;
       for (const p of particles) {
         const img = imageCache[p.image];
+        if (!img && (p.text || p.polygon)) {
+          if (p.a > 0) p.draw(ctx, null, fastColor);
+          continue;
+        }
         if (!img) {
           if (this.activeParticles.length <= 5) {
             debugLog('Missing image for particle:', p.image, 'Available images:', Object.keys(imageCache));
@@ -979,9 +1050,14 @@ function extractBoolValue(value) {
   return boolVal === "true" || boolVal === "1";
 }
 
+function extractNumberList(str) {
+  return (str.match(/\{([^}]*)\}/)?.[1] || str).split(",").map(v => extractNumericValue(v)).filter(v => Number.isFinite(v));
+}
+
 function extractParticlePropertyValue(prop, value) {
-  if (prop === "image") return extractStringValue(value);
-  if (prop === "offset" || prop === "attachoffset" || prop === "position") return extractArrayValue(value);
+  if (prop === "image" || prop === "sound" || prop === "text" || prop === "font" || prop === "style") return extractStringValue(value);
+  if (prop === "polygon") return extractNumberList(value);
+  if (prop === "offset" || prop === "attachoffset" || prop === "position" || prop === "movementvector") return extractArrayValue(value);
   return extractNumericValue(value);
 }
 
@@ -1010,8 +1086,32 @@ function assignEmitterProperty(target, prop, value) {
   else if (prop === "showontop") target.showontop = extractBoolValue(value);
   else if (prop === "showonground") target.showonground = extractBoolValue(value);
   else if (prop === "switchyandzaxis") target.switchyandzaxis = extractBoolValue(value);
+  else if (prop === "isfrozen") target.isfrozen = extractBoolValue(value);
   else return false;
   return true;
+}
+
+// The emitter functions that are not property writes or addlocal/addglobalmodifier: addemitmodifier (the modifier
+// that changes the particle types themselves), advancetime, removemodifiers and removeparticles. true when the line was one.
+function applyEmitterStatement(config, line, options = {}) {
+  const emitModifier = line.match(/(?:emitter\.)?addemitmodifier\s*\(\s*"([^"]+)"\s*,\s*([^,]+)\s*,\s*([^,]+)\s*,\s*"([^"]+)"\s*,\s*"([^"]+)"\s*,\s*(.+?)\s*,\s*((?:[^),]|\([^)]*\))+)\s*\)/i);
+  if (emitModifier) {
+    config.templateModifiers.push(createModifierFromMatch(emitModifier, false, options));
+    return true;
+  }
+  const advance = line.match(/^(?:emitter\.)?advancetime\s*\(\s*(.+?)\s*\)\s*;?$/i);
+  if (advance) {
+    const seconds = extractNumericValue(advance[1]);
+    if (seconds > 0) config.advancetime = (config.advancetime || 0) + seconds;
+    return true;
+  }
+  if (/^(?:emitter\.)?removemodifiers\s*\(\s*\)\s*;?$/i.test(line)) {
+    config.modifiers.length = 0;
+    config.templateModifiers.length = 0;
+    return true;
+  }
+  if (/^(?:emitter\.)?removeparticles\s*\(\s*\)\s*;?$/i.test(line)) return true;
+  return false;
 }
 
 function createModifierFromMatch(match, isGlobal, options = {}) {
@@ -1127,8 +1227,9 @@ function evaluateGS2Expression(expr, env) {
 }
 
 function advancedParticleValue(prop, value, env) {
-  if (prop === "image") return extractStringValue(value);
-  if (prop === "offset" || prop === "attachoffset" || prop === "position") return extractArrayValue(value);
+  if (prop === "image" || prop === "sound" || prop === "text" || prop === "font" || prop === "style") return extractStringValue(value);
+  if (prop === "polygon") return extractNumberList(value);
+  if (prop === "offset" || prop === "attachoffset" || prop === "position" || prop === "movementvector") return extractArrayValue(value);
   return evaluateGS2Expression(value, env);
 }
 
@@ -1207,6 +1308,7 @@ function buildAdvancedEmitter(body, env, loopVar, loopValue, xExpr, yExpr, optio
     }
     const emitterMatch = line.match(/^emitter\.(\w+)\s*=\s*(.+?);?$/i);
     if (emitterMatch && assignEmitterProperty(config, emitterMatch[1].toLowerCase(), emitterMatch[2].trim())) continue;
+    if (applyEmitterStatement(config, line, options)) continue;
     const modMatch = line.match(/^emitter\.addlocalmodifier\s*\(\s*"([^"]+)"\s*,\s*([^,]+)\s*,\s*([^,]+)\s*,\s*"([^"]+)"\s*,\s*"([^"]+)"\s*,\s*(.+?)\s*,\s*((?:[^),]|\([^)]*\))+)\s*\)/i);
     if (modMatch) config.modifiers.push(createModifierFromMatch(modMatch, false, options));
   }
@@ -1479,6 +1581,7 @@ function parseGS2ParticleCode(code, options = {}) {
             continue;
           }
         }
+        if (applyEmitterStatement(dropEmitterConfig, line, options)) continue;
         const dropTemplateModifierMatch = line.match(/(?:emitter\.)?addtemplatemodifier\s*\(\s*"([^"]+)"\s*,\s*([^,]+)\s*,\s*([^,]+)\s*,\s*"([^"]+)"\s*,\s*"([^"]+)"\s*,\s*(.+?)\s*,\s*((?:[^),]|\([^)]*\))+)\s*\)/i);
         if (dropTemplateModifierMatch) {
           dropEmitterConfig.templateModifiers.push(createModifierFromMatch(dropTemplateModifierMatch, false, options));
@@ -1527,6 +1630,7 @@ function parseGS2ParticleCode(code, options = {}) {
     if (line.toLowerCase().includes('addlocalmodifier') || line.toLowerCase().includes('addglobalmodifier')) {
       debugLog(`[MAIN] Checking modifier line (inEmitter=${inEmitter}, context=${JSON.stringify(context)}, inDropEmitter=${inDropEmitter}):`, line.substring(0, 100));
     }
+    if (applyEmitterStatement(config, line, options)) continue;
     const templateModifierMatch = line.match(/(?:emitter\.)?addtemplatemodifier\s*\(\s*"([^"]+)"\s*,\s*([^,]+)\s*,\s*([^,]+)\s*,\s*"([^"]+)"\s*,\s*"([^"]+)"\s*,\s*(.+?)\s*,\s*((?:[^),]|\([^)]*\))+)\s*\)/i);
     if (templateModifierMatch) {
       config.templateModifiers.push(createModifierFromMatch(templateModifierMatch, false, options));
@@ -1568,6 +1672,19 @@ class ParticleSystem {
     this.imageCache = {};
     this.lastTime = performance.now();
     this.simTime = 0;
+  }
+  // one of a particle type's sound files (a comma separated list), chosen at random, played as the particle is made
+  playSoundFile(names) {
+    const list = String(names).split(",").map(name => name.trim()).filter(Boolean);
+    if (!list.length || typeof Audio === "undefined") return;
+    const base = this.options.soundBaseUrl !== undefined ? this.options.soundBaseUrl : this.assetBaseUrl;
+    try {
+      const audio = new Audio(base + list[Math.floor(Math.random() * list.length)]);
+      const played = audio.play();
+      if (played && played.catch) played.catch(() => {});
+    } catch (error) {
+      debugLog("Particle sound failed:", error);
+    }
   }
   async loadImage(filename) {
     if (this.imageCache[filename]) return this.imageCache[filename];
@@ -1635,6 +1752,7 @@ class ParticleSystem {
     config.y = config.y !== undefined ? config.y : this.defaultY;
     config.canvasWidth = this.canvas.width;
     config.canvasHeight = this.canvas.height;
+    config.playSound = config.playSound || this.options.playSound || ((names) => this.playSoundFile(names));
     const emitter = new Emitter(config);
     debugLog('Emitter created, initial particles:', emitter.activeParticles.length);
     this.emitters.push(emitter);

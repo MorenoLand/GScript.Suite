@@ -17,11 +17,12 @@ class GmapGenerator {
         return `${xs}-${ys}`;
     }
 
-    static _levelContent(x, y, w, h, prefix, cx, cy, addLinks, fmt, template) {
+    static _levelContent(x, y, w, h, prefix, cx, cy, addLinks, fmt, template, tilesetName = '', tilesetType = 0) {
         const fVals = 'f/'.repeat(64).slice(0, -1);
         let content = 'GLEVNW01\n';
         if (template) { content += template; }
         else { for (let i = 0; i < 64; i++) content += `BOARD 0 ${i} 64 0 ${fVals}\n`; }
+        if (tilesetName && !/^TILESET\s/m.test(content)) content += `TILESET ${tilesetName}${tilesetType ? ` ${tilesetType}` : ''}\n`;
         if (addLinks) {
             const c = (dx, dy) => `${prefix}_${GmapGenerator._coords(x + dx, y + dy, cx, cy, fmt)}.nw`;
             if (x > 1)  content += `LINK ${c(-1,0)} 0 0 1 64 61 playery\n`;
@@ -53,6 +54,7 @@ class GmapGenerator {
   <div style="padding:14px;display:flex;flex-direction:column;gap:0;">
     <div style="${rowStyle}">
       <div style="${cellStyle}flex:2;"><label style="${lblStyle}">Prefix</label><input id="_gmgPrefix" style="${inpStyle}" placeholder="mymap"></div>
+      <div style="${cellStyle}"><label style="${lblStyle}">Tileset</label><input id="_gmgTileset" style="${inpStyle}width:120px;" value="picso.png"></div>
     </div>
     <div style="${rowStyle}">
       <div style="${cellStyle}"><label style="${lblStyle}">Width</label><input id="_gmgW" type="number" value="2" min="1" style="${inpStyle}width:80px;"></div>
@@ -62,6 +64,18 @@ class GmapGenerator {
     </div>
     <div style="margin-bottom:10px;display:flex;gap:16px;align-items:center;">
       <label style="${lblStyle}margin:0;display:flex;align-items:center;gap:6px;cursor:pointer;"><input type="checkbox" id="_gmgLinks"> Add level links</label>
+      <label style="${lblStyle}margin:0;display:flex;align-items:center;gap:6px;cursor:pointer;"><input type="checkbox" id="_gmgTerrain"> Terrain</label>
+    </div>
+    <div id="_gmgTerrainFields" style="display:none;margin-bottom:10px;">
+      <div style="${rowStyle}">
+        <div style="${cellStyle}"><label style="${lblStyle}">Seed</label><input id="_gmgSeed" type="number" value="1" style="${inpStyle}width:90px;"></div>
+        <div style="${cellStyle}"><label style="${lblStyle}">Map height</label><input id="_gmgHeight" type="number" step="0.1" value="4" style="${inpStyle}width:90px;"></div>
+        <div style="${cellStyle}"><label style="${lblStyle}">Chaos</label><input id="_gmgChaos" type="number" step="0.05" value="0.6" style="${inpStyle}width:90px;"></div>
+      </div>
+      <div style="${rowStyle}">
+        <div style="${cellStyle}"><label style="${lblStyle}">Level height</label><input id="_gmgLevHeight" type="number" step="0.1" value="0" style="${inpStyle}width:90px;"></div>
+        <div style="${cellStyle}"><label style="${lblStyle}">Level chaos</label><input id="_gmgLevChaos" type="number" step="0.05" value="0.6" style="${inpStyle}width:90px;"></div>
+      </div>
     </div>
     <div style="margin-bottom:10px;display:flex;gap:16px;align-items:center;">
       <label style="${lblStyle}margin:0;display:flex;align-items:center;gap:6px;cursor:pointer;"><input type="radio" name="_gmgFmt" value="numbered" checked> Numbered (00-01)</label>
@@ -91,6 +105,7 @@ class GmapGenerator {
         let templateContent = '';
         const $ = id => document.getElementById(id);
         $('_gmgClose').onclick = $('_gmgCancel').onclick = () => dlg.style.display = 'none';
+        $('_gmgTerrain').onchange = () => { $('_gmgTerrainFields').style.display = $('_gmgTerrain').checked ? 'block' : 'none'; };
         $('_gmgTplBtn').onclick = () => $('_gmgTplFile').click();
         $('_gmgTplClear').onclick = () => { templateContent = ''; $('_gmgTplName').value = ''; };
         $('_gmgTplFile').onchange = e => {
@@ -103,6 +118,8 @@ class GmapGenerator {
             const w = parseInt($('_gmgW').value), h = parseInt($('_gmgH').value);
             const cx = parseInt($('_gmgCX').value), cy = parseInt($('_gmgCY').value);
             const addLinks = $('_gmgLinks').checked;
+            const terrainOn = $('_gmgTerrain').checked;
+            const tilesetName = $('_gmgTileset').value.trim() || (terrainOn ? 'picso.png' : 'pics1.png');
             const fmt = document.querySelector('input[name="_gmgFmt"]:checked').value;
             const openAfter = $('_gmgOpenAfter').checked;
             const status = $('_gmgStatus');
@@ -110,16 +127,30 @@ class GmapGenerator {
             status.style.color='#aaa'; status.textContent='Generating...';
 
             const files = new Map();
-            let gmapContent = `GRMAP001\nWIDTH ${w}\nHEIGHT ${h}\nLEVELNAMES\n`;
+            let gmapContent = `GRMAP001\nWIDTH ${w}\nHEIGHT ${h}\nTILESET ${tilesetName}\nLEVELNAMES\n`;
             for (let y = 1; y <= h; y++) {
                 for (let x = 1; x <= w; x++) {
                     const name = `${prefix}_${GmapGenerator._coords(x, y, cx, cy, fmt)}.nw`;
                     gmapContent += `"${name}"${x < w ? ',' : ''}`;
-                    files.set(name, GmapGenerator._levelContent(x, y, w, h, prefix, cx, cy, addLinks, fmt, templateContent));
+                    files.set(name, GmapGenerator._levelContent(x, y, w, h, prefix, cx, cy, addLinks, fmt, templateContent, tilesetName, terrainOn ? 5 : 0));
                 }
                 gmapContent += '\n';
             }
             gmapContent += 'LEVELNAMESEND\n';
+            if (terrainOn && window.GraalTerrain?.TerrainMap) {
+                const terrain = window.GraalTerrain.TerrainMap.parse(gmapContent);
+                if (terrain) {
+                    terrain.setSettings({
+                        mapSeed: parseInt($('_gmgSeed').value) || 0,
+                        mapHeight: parseFloat($('_gmgHeight').value) || 0,
+                        mapChaos: parseFloat($('_gmgChaos').value) || 0.6,
+                        levelHeight: parseFloat($('_gmgLevHeight').value) || 0,
+                        levelChaos: parseFloat($('_gmgLevChaos').value) || 0.6
+                    });
+                    terrain.regenerate(true);
+                    gmapContent = terrain.saveText();
+                }
+            }
             const gmapName = `${prefix}.gmap`;
             files.set(gmapName, gmapContent);
 
