@@ -2411,9 +2411,8 @@ class LevelEditor {
             this.ctx.translate(Math.round(this.panX), Math.round(this.panY));
             this.ctx.scale(this.zoom, this.zoom);
             const _sprCX = (p._ganiOX ?? 0) + (p._imgW ?? 0) / 2;
-            const _playerTerrainOffset = this._terrainOffsetAtPixels(p.x + (p._ganiOX ?? 0) + (p._imgW ?? 16) / 2, p.y + (p._ganiOY ?? 0) + (p._imgH ?? 48));
-            const _chatHeadY = p.y + (p._ganiOY ?? 0) - _playerTerrainOffset;
-            const _chatFeetY = p.y + (p._ganiOY ?? 0) + (p._imgH ?? 48) - _playerTerrainOffset;
+            const _chatTerrainOffset = this._terrainOffsetAtPixels(p.x + (p._ganiOX ?? 0) + (p._imgW ?? 16) / 2, p.y + (p._ganiOY ?? 0) + (p._imgH ?? 48) / 2);
+            const _chatHeadY = p.y + (p._ganiOY ?? 0) - _chatTerrainOffset;
             if (this._showColDebug) {
                 const _tw2 = this.level.tileWidth || 16, _th2 = this.level.tileHeight || 16;
                 const _tsetW = this.level.tilesetImage?.width || 2048;
