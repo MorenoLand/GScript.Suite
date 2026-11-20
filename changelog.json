@@ -29,7 +29,8 @@
       "Gmap GENERATED level names are supported, so terrain maps such as offlinetutorial.gmap open without a LEVELNAMES section",
       "Tileset type 5 is exposed as Terrain and used by terrain gmaps; type 0/1 remain the normal tilesets",
       "Player and NPC names, chat and carried items stay attached to the terrain surface",
-      "Terrain panel can raise or lower the whole terrain and edit the corner heightmap"
+      "Terrain panel can raise or lower the whole terrain and edit the corner heightmap",
+      "Fixed go run and go build failing with an inconsistent vendoring error by moving the bundled Monaco and PeerJS assets out of the Go vendor directory"
     ]
   },
   {
