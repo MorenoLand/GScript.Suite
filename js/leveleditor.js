@@ -3715,7 +3715,12 @@ class LevelEditor {
                                 }
                                 if (ld.gmap) {
                                     const entry = this._buildGmapEntry(ld.gmap, ld.name, ld.gmapLevels);
-                                    if (entry) { entry.level.tilesetImage = img; this.levels.push(entry); }
+                                    if (entry) {
+                                        entry.level.tilesetImage = img;
+                                        entry.gmapFiles = ld.gmapFiles || entry.gmapFiles;
+                                        entry.fullPath = ld.fullPath || entry.fullPath;
+                                        this.levels.push(entry);
+                                    }
                                     continue;
                                 }
                                 if (ld.graalBinary) {
@@ -6286,6 +6291,61 @@ class LevelEditor {
         return `${prefix}_${letters}-${number}${suffix}`;
     }
 
+    _gmapMemberCandidates(name) {
+        const base = String(name || '').replace(/^"|"$/g, '').replace(/\\/g, '/').split('/').pop();
+        if (!base) return [];
+        const dot = base.lastIndexOf('.');
+        const ext = dot >= 0 ? base.slice(dot + 1).toLowerCase() : '';
+        const stem = dot >= 0 ? base.slice(0, dot) : base;
+        const candidates = [];
+        const add = value => { if (value && !candidates.some(item => item.toLowerCase() === value.toLowerCase())) candidates.push(value); };
+        if (ext === 'nw' || ext === 'graal' || ext === 'zelda') add(base);
+        for (const candidateExt of ['nw', 'graal', 'zelda']) add(`${stem}.${candidateExt}`);
+        if (ext && ext !== 'nw' && ext !== 'graal' && ext !== 'zelda') add(base);
+        return candidates;
+    }
+
+    _gmapMemberCached(name) {
+        for (const candidate of this._gmapMemberCandidates(name)) {
+            const lower = candidate.toLowerCase();
+            const text = this.fileCache.levels.get(candidate) || this.fileCache.levels.get(lower);
+            if (text) return { name: candidate, text, level: null };
+            const level = this.fileCache.levelObjects?.get(candidate) || this.fileCache.levelObjects?.get(lower);
+            if (level) return { name: candidate, text: null, level };
+        }
+        return null;
+    }
+
+    async _loadGmapMember(name, baseDir = '', sep = '/') {
+        const cached = this._gmapMemberCached(name);
+        if (cached) return cached;
+        for (const candidate of this._gmapMemberCandidates(name)) {
+            const ext = candidate.split('.').pop().toLowerCase();
+            const paths = [];
+            const addPath = value => { if (value && !paths.includes(value)) paths.push(value); };
+            if (baseDir) addPath(baseDir + sep + candidate);
+            addPath(this._wailsPathIndex?.get(candidate.toLowerCase()));
+            for (const path of paths) {
+                try {
+                    if (ext === 'graal' || ext === 'zelda') {
+                        const data = await _wails.fs.readFile(path);
+                        const level = Level.loadFromGraal(data.buffer || data);
+                        if (!level) continue;
+                        this.fileCache.levelObjects = this.fileCache.levelObjects || new Map();
+                        this.fileCache.levelObjects.set(candidate, level);
+                        this.fileCache.levelObjects.set(candidate.toLowerCase(), level);
+                        return { name: candidate, text: null, level };
+                    }
+                    const text = await _wails.fs.readTextFile(path);
+                    if (!text) continue;
+                    this.fileCache.levels.set(candidate.toLowerCase(), text);
+                    return { name: candidate, text, level: null };
+                } catch (error) {}
+            }
+        }
+        return null;
+    }
+
     _buildGmapEntry(text, filename, levelsOverride) {
         const { tilesetName, grid } = this.parseGmap(text);
         if (!grid.length) return null;
@@ -6303,10 +6363,10 @@ class LevelEditor {
         const usedLevels = {};
         const usedObjects = {};
         const usedHeights = {};
-        const _lvlByBasename = name => { const bn = name.toLowerCase(); for (const [k, v] of this.fileCache.levels) { if (k.toLowerCase().endsWith('\\' + bn) || k.toLowerCase().endsWith('/' + bn)) return v; } return null; };
-        const _objByBasename = name => { const bn = name.toLowerCase(); for (const [k, v] of this.fileCache.levelObjects || []) { if (k.toLowerCase() === bn || k.toLowerCase().endsWith('\\' + bn) || k.toLowerCase().endsWith('/' + bn)) return v; } return null; };
-        const getLevel = name => levelsOverride ? (typeof levelsOverride.get === 'function' ? levelsOverride.get(name) : (levelsOverride[name] ?? levelsOverride[`"${name}"`])) : (this.fileCache.levels.get(name) || this.fileCache.levels.get(name.toLowerCase()) || _lvlByBasename(name));
-        const getLevelObject = name => this.fileCache.levelObjects?.get(name) || this.fileCache.levelObjects?.get(name.toLowerCase()) || _objByBasename(name) || null;
+        const usedFiles = {};
+        const getOverride = name => levelsOverride ? (typeof levelsOverride.get === 'function' ? levelsOverride.get(name) : (levelsOverride[name] ?? levelsOverride[`"${name}"`])) : null;
+        const getLevel = name => getOverride(name) ?? this._gmapMemberCached(name)?.text ?? null;
+        const getLevelObject = name => this._gmapMemberCached(name)?.level ?? null;
         for (let cellY = 0; cellY < gridH; cellY++) {
             for (let cellX = 0; cellX < (grid[cellY]?.length || 0); cellX++) {
                 const levelName = grid[cellY][cellX];
@@ -6316,6 +6376,8 @@ class LevelEditor {
                 if (!nwText && !levelObject) continue;
                 if (nwText) usedLevels[levelName] = nwText;
                 else usedObjects[levelName] = levelObject;
+                const member = this._gmapMemberCached(levelName);
+                usedFiles[levelName] = member?.name || levelName;
                 const sub = nwText ? Level.loadFromNW(nwText) : levelObject;
                 if (sub.heights) usedHeights[levelName] = [...sub.heights];
                 for (let layer = 0; layer < 3; layer++)
@@ -6331,7 +6393,7 @@ class LevelEditor {
                 }
             }
         }
-        return { level: merged, name: filename, modified: false, gmapText: text, gmapLevels: usedLevels, gmapObjects: usedObjects, gmapHeights: usedHeights, gmapGrid: grid, terrain, terrainApplied: !!terrain?.hasTerrainData, fullPath: '' };
+        return { level: merged, name: filename, modified: false, gmapText: text, gmapLevels: usedLevels, gmapObjects: usedObjects, gmapHeights: usedHeights, gmapFiles: usedFiles, gmapGrid: grid, terrain, terrainApplied: !!terrain?.hasTerrainData, fullPath: '' };
     }
 
     async _refillGmapEntries() {
@@ -6340,31 +6402,31 @@ class LevelEditor {
         for (const entry of this.levels) {
             if (!entry.gmapGrid) continue;
             const grid = entry.gmapGrid;
-            const missing = [];
+            const missing = new Set();
             for (const row of grid) for (const name of row) {
                 if (!name || entry.gmapLevels?.[name] || entry.gmapObjects?.[name]) continue;
-                const key = name.toLowerCase();
-                const inFileCache = this.fileCache.levels.has(key) || this.fileCache.levelObjects?.has(name) || this.fileCache.levelObjects?.has(key);
-                const inPathIndex = this._wailsPathIndex.has(key);
-                if (!inFileCache && inPathIndex) missing.push([name, key]);
+                if (!this._gmapMemberCached(name)) missing.add(name);
             }
-            if (!missing.length) continue;
-            await Promise.all(missing.map(([name, key]) => {
-                const ext = name.split('.').pop().toLowerCase();
-                if (ext === 'graal' || ext === 'zelda') return _wails.fs.readFile(this._wailsPathIndex.get(key)).then(buf => { const lvl = Level.loadFromGraal(buf.buffer || buf); if (lvl) { this.fileCache.levelObjects = this.fileCache.levelObjects || new Map(); this.fileCache.levelObjects.set(name, lvl); } }).catch(() => {});
-                return _wails.fs.readTextFile(this._wailsPathIndex.get(key)).then(t => this.fileCache.levels.set(key, t)).catch(() => {});
-            }));
+            if (!missing.size) continue;
+            const slash = String.fromCharCode(92);
+            const cut = entry.fullPath ? Math.max(entry.fullPath.lastIndexOf(slash), entry.fullPath.lastIndexOf('/')) : -1;
+            const dir = cut >= 0 ? entry.fullPath.slice(0, cut) : '';
+            const sep = entry.fullPath?.includes(slash) ? slash : '/';
+            await Promise.all([...missing].map(name => this._loadGmapMember(name, dir, sep)));
             for (let cy = 0; cy < grid.length; cy++) {
                 for (let cx = 0; cx < (grid[cy]?.length || 0); cx++) {
                     const name = grid[cy][cx];
                     if (!name || entry.gmapLevels?.[name] || entry.gmapObjects?.[name]) continue;
-                    const key = name.toLowerCase();
-                    const nwText = this.fileCache.levels.get(key) || this.fileCache.levels.get(name);
-                    const levelObject = nwText ? null : (this.fileCache.levelObjects?.get(name) || this.fileCache.levelObjects?.get(key));
-                    if (!nwText && !levelObject) continue;
+                    const member = this._gmapMemberCached(name);
+                    if (!member) continue;
+                    const nwText = member.text || null;
+                    const levelObject = member.level || null;
                     if (nwText) { if (!entry.gmapLevels) entry.gmapLevels = {}; entry.gmapLevels[name] = nwText; }
                     else { if (!entry.gmapObjects) entry.gmapObjects = {}; entry.gmapObjects[name] = levelObject; }
+                    entry.gmapFiles ??= {};
+                    entry.gmapFiles[name] = member.name;
                     const sub = nwText ? Level.loadFromNW(nwText) : levelObject;
+                    if (!sub) continue;
                     if (sub.heights) { entry.gmapHeights ??= {}; entry.gmapHeights[name] = [...sub.heights]; }
                     const lv = entry.level;
                     for (let layer = 0; layer < 3; layer++)
@@ -6411,11 +6473,12 @@ class LevelEditor {
                         sub.addObject(clone);
                     }
                 }
+                const file = entry.gmapFiles?.[name] || name;
                 if (hasText) updatedLevels[name] = sub.saveToNW();
-                else updatedBuffers[name] = sub.saveToGraal(name.toLowerCase().endsWith('.zelda'));
+                else updatedBuffers[name] = sub.saveToGraal(file.toLowerCase().endsWith('.zelda'));
             }
         }
-        return { gmap: entry.gmapText, gmapLevels: updatedLevels, gmapBuffers: updatedBuffers, gmapHeights: entry.gmapHeights || {}, gmapGrid: entry.gmapGrid, name: entry.name, tilesetName: lv.tilesetName || 'pics1.png', modified: entry.modified, terrainApplied: entry.terrainApplied };
+        return { gmap: entry.gmapText, gmapLevels: updatedLevels, gmapBuffers: updatedBuffers, gmapHeights: entry.gmapHeights || {}, gmapFiles: entry.gmapFiles || {}, gmapGrid: entry.gmapGrid, name: entry.name, tilesetName: lv.tilesetName || 'pics1.png', modified: entry.modified, terrainApplied: entry.terrainApplied };
     }
 
     async openGmapText(text, filename, levelsOverride, filePath = null) {
@@ -6425,21 +6488,12 @@ class LevelEditor {
             const cut = filePath ? Math.max(filePath.lastIndexOf(slash), filePath.lastIndexOf('/')) : -1;
             const dir = cut >= 0 ? filePath.slice(0, cut) : '';
             const sep = filePath?.includes(slash) ? slash : '/';
-            const toLoad = [];
+            const toLoad = new Set();
             for (const row of grid) for (const rawName of row) {
-                if (!rawName) continue;
-                const hasExt = /\.(nw|graal|zelda)$/i.test(rawName);
-                const localName = hasExt ? rawName : rawName + '.nw';
-                const key = localName.toLowerCase();
-                const alreadyLoaded = this.fileCache.levels.has(key) || this.fileCache.levels.has(rawName.toLowerCase()) || this.fileCache.levelObjects?.has(rawName) || this.fileCache.levelObjects?.has(key) || [...this.fileCache.levels.keys()].some(k => k.toLowerCase().endsWith('\\' + key) || k.toLowerCase().endsWith('/' + key));
-                const path = alreadyLoaded ? null : (dir ? dir + sep + localName : null) || this._wailsPathIndex?.get(key) || this._wailsPathIndex?.get(rawName.toLowerCase()) || [...(this._wailsPathIndex?.entries?.() || [])].find(([k]) => k.toLowerCase().endsWith('\\' + key) || k.toLowerCase().endsWith('/' + key))?.[1];
-                if (!alreadyLoaded && path) toLoad.push([localName, path]);
+                if (!rawName || this._gmapMemberCached(rawName)) continue;
+                toLoad.add(rawName);
             }
-            await Promise.all(toLoad.map(([name, path]) => {
-                const ext = name.split('.').pop().toLowerCase();
-                if (ext === 'graal' || ext === 'zelda') return _wails.fs.readFile(path).then(buf => { const lvl = Level.loadFromGraal(buf.buffer || buf); if (lvl) { this.fileCache.levelObjects = this.fileCache.levelObjects || new Map(); this.fileCache.levelObjects.set(name, lvl); } }).catch(e => console.warn('[openGmapText load err]', name, e));
-                return _wails.fs.readTextFile(path).then(t => { this.fileCache.levels.set(name.toLowerCase(), t); }).catch(e => console.warn('[openGmapText load err]', name, e));
-            }));
+            await Promise.all([...toLoad].map(name => this._loadGmapMember(name, dir, sep)));
         }
         const entry = this._buildGmapEntry(text, filename, levelsOverride);
         if (!entry) return;
@@ -6674,7 +6728,7 @@ class LevelEditor {
             const dir = cut >= 0 ? entry.fullPath.slice(0, cut) : '';
             const sep = entry.fullPath.includes(slash) ? slash : '/';
             const levelPath = (name) => {
-                const clean = name.replace(/^"|"$/g, '');
+                const clean = (serialized.gmapFiles?.[name] || name).replace(/^"|"$/g, '');
                 const file = /\.(nw|graal|zelda)$/i.test(clean) ? clean : clean + '.nw';
                 const key = file.toLowerCase();
                 return this._wailsPathIndex?.get(key) || this._wailsPathIndex?.get(clean.toLowerCase()) || (dir ? dir + sep + file : file);
@@ -6725,8 +6779,9 @@ class LevelEditor {
             close();
             const { default: JSZip } = await import('https://cdn.jsdelivr.net/npm/jszip@3.10.1/+esm');
             const zip = new JSZip();
-            for (const [name, text] of subset) zip.file(name, text);
-            for (const [name, data] of bufferSubset) zip.file(name, data);
+            const fileFor = name => serialized.gmapFiles?.[name] || name;
+            for (const [name, text] of subset) zip.file(fileFor(name), text);
+            for (const [name, data] of bufferSubset) zip.file(fileFor(name), data);
             zip.file(gmapName, entry.gmapText);
             const blob = await zip.generateAsync({ type: 'blob' });
             this._downloadFile(gmapName.replace('.gmap', '.zip'), blob, 'application/zip');

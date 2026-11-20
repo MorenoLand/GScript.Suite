@@ -25,7 +25,7 @@
       "NW HEIGHTS blocks and GR-V1.04 terrain heights round-trip",
       "Added terrain tests (npm test)",
       "Level editor selection, object placement and tile previews follow the terrain surface, and play mode follows terrain height, water and swimming",
-      "Terrain gmaps load binary .graal member levels through the working directory, including their NPCs and NPC scripts",
+      "Terrain gmaps load .nw, .graal and .zelda member levels through the working directory, falling back between those formats when a listed member file uses a different extension, including their NPCs and NPC scripts",
       "Gmap GENERATED level names are supported, so terrain maps such as offlinetutorial.gmap open without a LEVELNAMES section",
       "Tileset type 5 is exposed as Terrain and used by terrain gmaps; type 0/1 remain the normal tilesets",
       "Player and NPC names, chat and carried items stay attached to the terrain surface",
