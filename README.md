@@ -2,7 +2,7 @@
 
 Includes a Gani animation editor (.gani) and a level editor (.nw), merged into a single interface. Built on Stefan/39sters level editor work. Work in progress.
 
-![GSuite](https://raw.githubusercontent.com/MorenoLand/GScript.GSuite/refs/heads/master/gsuite.png)
+![GSuite](./gsuite.png)
 
 ## Tools and Features
 
