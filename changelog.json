@@ -36,7 +36,14 @@
       "Added a Timeline Frame Previews setting; disabling it uses compact flat frame bars and a shorter timeline",
       "Movie mode appearance defaults now use the same collapsible Defaults table as sprite mode",
       "Fixed the timeline header clipping the Frames label and the frame counter overlapping the scrubber for three-digit frame counts",
-      "Temporarily hid the experimental P2P collab buttons in both editors"
+      "Temporarily hid the experimental P2P collab buttons in both editors",
+      "Player nicknames use the reference placement below the player",
+      "Throw-through tiles block player movement again in play mode",
+      "Play-mode noclip toggles with N instead of Shift",
+      "Timeline frame previews apply their compact height on first load",
+      "Play-mode labels use the bold font with shadow only, removing the fringed stroke",
+      "Suite restores the last active tab across editors, including a level tab left in play mode",
+      "Updated the Wails runtime to v3.2.0-nightly.20261103"
     ]
   },
   {

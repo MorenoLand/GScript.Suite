@@ -7324,19 +7324,14 @@ async function initGaniEditorStartup() {
                     timelineContainer.style.removeProperty("flex");
                     timelineContainer.style.removeProperty("height");
                 const isTouch = (navigator.maxTouchPoints && navigator.maxTouchPoints > 1) || (window.matchMedia && window.matchMedia("(pointer: coarse)").matches);
-                if (isTouch) {
-                    timelineContainer.style.height = "250px";
-                    timelineContainer.style.flex = "0 0 250px";
-                    timelineContainer.style.minHeight = "230px";
-                } else {
-                    timelineContainer.style.height = "218px";
-                    timelineContainer.style.flex = "0 0 218px";
-                    timelineContainer.style.minHeight = "180px";
-                    }
-                    if (mainSplitter) {
-                        mainSplitter.style.height = "calc(100% - 222px)";
-                        mainSplitter.style.maxHeight = "calc(100% - 222px)";
-                    }
+                const timelineHeight = timelinePreviewsEnabled ? (isTouch ? 250 : 218) : 150;
+                timelineContainer.style.height = timelineHeight + "px";
+                timelineContainer.style.flex = `0 0 ${timelineHeight}px`;
+                timelineContainer.style.minHeight = timelineHeight + "px";
+                if (mainSplitter) {
+                    mainSplitter.style.height = `calc(100% - ${timelineHeight}px)`;
+                    mainSplitter.style.maxHeight = `calc(100% - ${timelineHeight}px)`;
+                }
                 } else {
                     timelineContainer.style.setProperty("display", "none", "important");
                     timelineContainer.style.setProperty("visibility", "hidden", "important");
@@ -7374,10 +7369,10 @@ async function initGaniEditorStartup() {
             }
             setTimeout(() => {
                 const isTouch = (navigator.maxTouchPoints && navigator.maxTouchPoints > 1) || (window.matchMedia && window.matchMedia("(pointer: coarse)").matches);
-                if (isTouch && timelineContainer) {
+                if (isTouch && timelinePreviewsEnabled && timelineContainer) {
                     timelineContainer.style.height = "250px";
                     timelineContainer.style.flex = "0 0 250px";
-                    timelineContainer.style.minHeight = "230px";
+                    timelineContainer.style.minHeight = "250px";
                     drawTimeline();
                 }
             }, 100);

@@ -24,13 +24,7 @@ function _fmtKB(b) {
 const _CNAMES = ['white','yellow','orange','pink','red','darkred','lightgreen','green','darkgreen','lightblue','blue','darkblue','brown','cynober','purple','darkpurple','lightgray','gray','black','transparent'];
 const _CRGB = [[255,255,255],[255,255,0],[255,173,107],[255,192,203],[255,0,0],[139,0,0],[144,238,144],[0,128,0],[0,100,0],[173,216,230],[0,0,255],[0,0,139],[139,69,19],[255,215,0],[128,0,128],[64,0,64],[211,211,211],[128,128,128],[0,0,0],[0,0,0]];
 const _BODY_PALETTE = [{r:255,g:255,b:255,slot:1},{r:255,g:173,b:107,slot:0},{r:255,g:0,b:0,slot:2},{r:206,g:24,b:41,slot:3},{r:0,g:0,b:255,slot:4},{r:0,g:132,b:0,slot:-1},{r:0,g:0,b:0,slot:-1}];
-function _drawPlayModeLabel(ctx, text, x, y, emboldenScale = 1) {
-    const transform = ctx.getTransform?.();
-    const screenScale = Math.max(Math.abs(transform?.a || 1), Math.abs(transform?.d || 1));
-    ctx.shadowColor = 'transparent'; ctx.shadowOffsetX = 0; ctx.shadowOffsetY = 0; ctx.shadowBlur = 0;
-    ctx.strokeStyle = ctx.fillStyle;
-    ctx.lineWidth = 2 * Math.max(0, Math.min(1, emboldenScale)) / screenScale;
-    ctx.strokeText(text, x, y);
+function _drawPlayModeLabel(ctx, text, x, y) {
     ctx.shadowColor = 'rgba(20,40,200,1)'; ctx.shadowOffsetX = 2; ctx.shadowOffsetY = 2; ctx.shadowBlur = 0;
     ctx.fillText(text, x, y);
 }
@@ -2341,9 +2335,10 @@ class LevelEditor {
             this.ctx.save();
             this.ctx.setTransform(1, 0, 0, 1, 0, 0);
             this.ctx.textAlign = 'center';
+            this.ctx.textBaseline = 'top';
             this.ctx.font = `bold ${_nickSz}px 'TempusSansITC','Tempus Sans ITC',sans-serif`;
             this.ctx.fillStyle = '#fff';
-            _drawPlayModeLabel(this.ctx, p.nick + (p.guild ? ` (${p.guild})` : ''), (p.x + _sprCX) * this.zoom + this.panX, _feetY * this.zoom + this.panY + _nickSz - 6, Math.min(1, this.zoom, _nickSz / Math.max(_gs.nickFontSize, 1)));
+            _drawPlayModeLabel(this.ctx, p.nick + (p.guild ? ` (${p.guild})` : ''), (p.x + _sprCX) * this.zoom + this.panX, _feetY * this.zoom + this.panY + 2.5 * this.zoom);
             this.ctx.restore();
         }
 
@@ -2513,7 +2508,7 @@ class LevelEditor {
             if (this._playerChat) {
                 this.ctx.font = `bold ${_chatSz}px 'TempusSansITC','Tempus Sans ITC',sans-serif`;
                 this.ctx.fillStyle = '#fff';
-                _drawPlayModeLabel(this.ctx, this._playerChat, _cx, _chatHeadY * this.zoom + this.panY - 16, Math.min(1, this.zoom, (_chatSz * this.zoom) / Math.max(_gs.chatFontSize, 1)));
+                _drawPlayModeLabel(this.ctx, this._playerChat, _cx, _chatHeadY * this.zoom + this.panY - 16);
             }
             this.ctx.shadowColor = 'transparent'; this.ctx.shadowOffsetX = 0; this.ctx.shadowOffsetY = 0; this.ctx.textAlign = 'left';
             const _tw = this.level.tileWidth || 16, _th = this.level.tileHeight || 16;
@@ -5977,8 +5972,8 @@ class LevelEditor {
     _updatePlayer(dt) {
         const p = this._player, k = this._playKeys;
         this._updatePlayLiftObjects(dt);
-        if (k['Shift'] && !p._shiftWas) { this._playNoclip = !this._playNoclip; delete this._playKeys['Shift']; }
-        p._shiftWas = k['Shift'];
+        if ((k['n'] || k['N']) && !p._nWas) { this._playNoclip = !this._playNoclip; delete this._playKeys['n']; delete this._playKeys['N']; }
+        p._nWas = k['n'] || k['N'];
         const tw = this.level.tileWidth || 16, th = this.level.tileHeight || 16;
         const up = k['ArrowUp'] || k['w'] || (this._mobileStickDir === 'left' && this._mobileStickVal.y < -0.35);
         const down = k['ArrowDown'] || k['s'] || (this._mobileStickDir === 'left' && this._mobileStickVal.y > 0.35);

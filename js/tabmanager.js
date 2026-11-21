@@ -7,6 +7,7 @@ const TabManager = {
     _initialized: false,
     _listEl: null,
     _pendingRestoreState: null,
+    _pendingActiveClearTimer: null,
 
     get _listEl() {
         return document.getElementById('suiteTabsList');
@@ -155,6 +156,8 @@ const TabManager = {
                 } catch (e) {}
             }
             this._pendingActiveState = active;
+            if (this._pendingActiveClearTimer) clearTimeout(this._pendingActiveClearTimer);
+            this._pendingActiveClearTimer = setTimeout(() => { this._pendingActiveState = null; }, 3000);
             this._restorePendingState();
             return true;
         } catch (e) { console.warn('[TabManager restoreState] failed:', e); return false; }
@@ -208,6 +211,7 @@ const TabManager = {
         this._updateScrollButtons();
         this.switchTo(id);
         this.saveState();
+        if (this._pendingActiveState) setTimeout(() => this.restoreActiveFromState(), 0);
         return entry;
     },
 
@@ -385,7 +389,6 @@ const TabManager = {
         if (!active) return false;
         const match = this._tabs.find(tab => this._tabMatchesState(tab, active));
         if (!match) return false;
-        this._pendingActiveState = null;
         this.switchTo(match.id);
         this.saveState();
         return true;
@@ -432,6 +435,8 @@ const TabManager = {
                 this._suppressClick = false;
                 return;
             }
+            this._pendingActiveState = null;
+            if (this._pendingActiveClearTimer) { clearTimeout(this._pendingActiveClearTimer); this._pendingActiveClearTimer = null; }
             this.switchTo(entry.id);
         });
         el.addEventListener('dragstart', e => e.preventDefault());
