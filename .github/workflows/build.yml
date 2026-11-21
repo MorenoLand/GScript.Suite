@@ -13,12 +13,14 @@ on:
         required: true
 
 permissions:
-  contents: read
+  contents: write
 
 jobs:
   build:
     name: Build ${{ matrix.artifact }}
     runs-on: ${{ matrix.os }}
+    permissions:
+      contents: read
     timeout-minutes: 60
     strategy:
       fail-fast: false
