@@ -134,7 +134,7 @@ jobs:
         run: Move-Item -LiteralPath bin\GSuite.exe -Destination bin\GSuite-windows-amd64.exe
 
       - name: Upload exact release artifact
-        uses: actions/upload-artifact@v4
+        uses: actions/upload-artifact@v7
         with:
           name: ${{ matrix.artifact }}
           if-no-files-found: error
