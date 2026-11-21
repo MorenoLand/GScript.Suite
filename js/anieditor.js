@@ -810,6 +810,7 @@ let splitViewEnabled = localStorage.getItem("ganiEditorSplitView") === "true";
 let mirroredActionsEnabled = false;
 let pixelGridEnabled = false;
 let pixelGridSize = 16;
+let timelinePreviewsEnabled = localStorage.getItem("editorTimelinePreviews") !== "false";
 let maxUndo = 50;
 let redrawScheduled = false;
 let redrawRafId = null;
@@ -1814,7 +1815,7 @@ function redraw() {
         }
     }
     }
-    drawTimeline();
+    if (!isPlaying) drawTimeline();
     if (editingSprite) drawSpritePreview();
     if (isBoxSelecting && boxSelectStart && boxSelectEnd) {
         const zoom = zoomFactors[zoomLevel] || 1.0;
@@ -2690,7 +2691,6 @@ function playMovieSoundTrack(item, state, frameId) {
 function drawMovieFrame(ctx, frameId) {
     if (!currentAnimation?.isMovieMode) return;
     const labels = [];
-    const actorBounds = [];
     const items = (currentAnimation.movieItems || [])
         .map(item => ({item, state: getMovieItemState(item, frameId)}))
         .filter(entry => entry.state && (entry.state.visible !== false || (entry.item.kind || "").toUpperCase() === "SOUND"))
@@ -2725,8 +2725,6 @@ function drawMovieFrame(ctx, frameId) {
             }
             const nameLabel = _isExportRender ? null : getMovieActorNameLabel(item, state);
             if (nameLabel) drawMoviePlayText(ctx, nameLabel.text, nameLabel.x, nameLabel.y, nameLabel.size, nameLabel.baseline);
-            const actorBound = getMovieItemBounds(item, frameId);
-            if (actorBound) actorBounds.push(actorBound);
             if (state.chat) labels.push({text: state.chat, x: dx + 16, y: dy - 3, size: 20, baseline: "bottom"});
         }
         if (selectedMovieItem === item && !_isExportRender) {
@@ -2906,9 +2904,10 @@ function drawTimeline() {
             canvasWidth = window.innerWidth || 800;
         }
     }
-    timelineCanvas.width = canvasWidth;
+    if (timelineCanvas.width !== canvasWidth) timelineCanvas.width = canvasWidth;
     const viewHeight = timelineView ? (timelineView.clientHeight || 116) : 116;
-    timelineCanvas.height = viewHeight || 60;
+    const canvasHeight = viewHeight || 60;
+    if (timelineCanvas.height !== canvasHeight) timelineCanvas.height = canvasHeight;
     const width = timelineCanvas.width;
     const height = timelineCanvas.height;
     timelineCtx.clearRect(0, 0, width, height);
@@ -2949,7 +2948,7 @@ function drawTimeline() {
         return;
     }
     const isTouch = window.matchMedia && window.matchMedia("(pointer: coarse)").matches;
-    const buttonHeight = isTouch ? 96 : 110;
+    const buttonHeight = timelinePreviewsEnabled ? (isTouch ? 96 : 110) : (isTouch ? 38 : 34);
     let totalTime = 0;
     for (const frame of currentAnimation.frames) totalTime += frame.duration;
     let x = 2;
@@ -2960,10 +2959,13 @@ function drawTimeline() {
     const getPixelsPerMs = () => (window.matchMedia && window.matchMedia("(pointer: coarse)").matches ? 1 : 1.5) * timelineZoom;
     const pixelsPerMs = getPixelsPerMs();
     let totalTimelineWidth = 2;
+    const frameXs = new Array(currentAnimation.frames.length + 1);
+    frameXs[0] = 2 - timelineScrollX;
     for (let i = 0; i < currentAnimation.frames.length; i++) {
         const frame = currentAnimation.frames[i];
         const frameWidth = Math.max(frame.duration * pixelsPerMs, minFrameWidth);
         totalTimelineWidth += frameWidth;
+        frameXs[i + 1] = frameXs[i] + frameWidth;
     }
     timelineTotalWidth = totalTimelineWidth;
 
@@ -3025,8 +3027,8 @@ function drawTimeline() {
         timelineCtx.rect(clipX, clipY, clipW, clipH);
         timelineCtx.clip();
         if (currentAnimation.isMovieMode) {
-            drawMovieFramePreview(timelineCtx, i, clipX, clipY, clipW, clipH);
-        } else if (pieces.length > 0) {
+            if (timelinePreviewsEnabled && !isPlaying) drawMovieFramePreview(timelineCtx, i, clipX, clipY, clipW, clipH);
+        } else if (timelinePreviewsEnabled && !isPlaying && pieces.length > 0) {
             let minX = Infinity, minY = Infinity, maxX = -Infinity, maxY = -Infinity;
             for (const piece of pieces) {
                 if (piece.type === "sprite") {
@@ -3071,8 +3073,7 @@ function drawTimeline() {
             const times = movieKeyTimes(items[itemIndex]);
             for (const time of times) {
                 if (time < 0 || time >= currentAnimation.frames.length) continue;
-                let keyX = 2 - timelineScrollX;
-                for (let frameIndex = 0; frameIndex < time; frameIndex++) keyX += Math.max(currentAnimation.frames[frameIndex].duration * pixelsPerMs, minFrameWidth);
+                const keyX = frameXs[Math.floor(time)] ?? frameXs[frameXs.length - 1];
                 timelineCtx.fillStyle = keyColors[itemIndex % keyColors.length];
                 timelineCtx.fillRect(keyX + 3, headerHeight + 2, 3, 7);
             }
@@ -5158,7 +5159,11 @@ function ensureMovieModeUI() {
                 <label><span id="movieItemShaded" class="custom-checkbox"> </span> Shaded</label>
             </div>
         </div>
-        <div id="movieAppearanceFields" style="display:grid;grid-template-columns:1fr 1fr;gap:4px 6px;margin-top:8px;"></div>
+        <button id="btnMovieDefaults" title="Defaults" style="width:100%;margin-top:8px;">Defaults ▶</button>
+        <table class="defaults-table" id="movieAppearanceFields" style="display:none;">
+            <thead><tr><th>Head</th><th>Value</th></tr></thead>
+            <tbody id="movieAppearanceBody"></tbody>
+        </table>
     `;
     rightPanel.insertBefore(group, rightPanel.firstChild);
     document.getElementById("btnAddMovieActor").onclick = () => addMovieItem("actor");
@@ -5212,8 +5217,16 @@ function ensureMovieModeUI() {
         document.getElementById("movieAutoGaniSetting").textContent = enabled ? "✓" : " ";
         localStorage.setItem("movieAutoGaniSetting", enabled ? "true" : "false");
     };
-    const appearanceBox = document.getElementById("movieAppearanceFields");
-    if (appearanceBox) appearanceBox.innerHTML = MOVIE_APPEARANCE_FIELDS.map(key => '<label style="display:block;font-size:11px;">' + key + '<input id="movieLook_' + key + '" type="text" style="width:100%;box-sizing:border-box;"></label>').join("");
+    const appearanceBody = document.getElementById("movieAppearanceBody");
+    if (appearanceBody) appearanceBody.innerHTML = MOVIE_APPEARANCE_FIELDS.map(key => `<tr><td>${key.toUpperCase()}</td><td><input id="movieLook_${key}" type="text"></td></tr>`).join("");
+    const movieDefaultsBtn = document.getElementById("btnMovieDefaults");
+    if (movieDefaultsBtn) movieDefaultsBtn.onclick = () => {
+        const table = document.getElementById("movieAppearanceFields");
+        if (!table) return;
+        const show = table.style.display === "none" || table.style.display === "";
+        table.style.display = show ? "table" : "none";
+        movieDefaultsBtn.textContent = show ? "Defaults ▼" : "Defaults ▶";
+    };
     for (const id of ["movieItemKind", "movieItemName", "movieItemAni", "movieItemChat", "movieItemDir", "movieItemLayer", "movieItemSprite", "movieItemFile", "movieItemText", "movieItemFont", "movieItemColor", "movieItemZoom", ...MOVIE_APPEARANCE_FIELDS.map(key => "movieLook_" + key)]) {
         document.getElementById(id).onchange = applyMoviePanelChanges;
     }
@@ -6528,7 +6541,7 @@ function updateTabs() {
         });
         const close = document.createElement("span");
         close.className = "tab-close";
-        close.innerHTML = "×";
+        close.innerHTML = "x";
         close.onclick = (e) => {
             e.stopPropagation();
             e.preventDefault();
@@ -7535,7 +7548,7 @@ async function initGaniEditorStartup() {
             const rect = contentArea.getBoundingClientRect();
             const newTimelineHeight = rect.bottom - e.clientY;
             const isTouch = (navigator.maxTouchPoints && navigator.maxTouchPoints > 1) || (window.matchMedia && window.matchMedia("(pointer: coarse)").matches);
-            const minHeight = isTouch ? 230 : 180;
+            const minHeight = timelinePreviewsEnabled ? (isTouch ? 230 : 180) : (isTouch ? 160 : 150);
             if (newTimelineHeight >= minHeight && newTimelineHeight <= 400) {
                 timelineContainer.style.height = newTimelineHeight + "px";
                 timelineContainer.style.flex = `0 0 ${newTimelineHeight}px`;
@@ -7607,7 +7620,7 @@ async function initGaniEditorStartup() {
             const rect = contentArea.getBoundingClientRect();
             const newTimelineHeight = rect.bottom - e.touches[0].clientY;
             const isTouch = (navigator.maxTouchPoints && navigator.maxTouchPoints > 1) || (window.matchMedia && window.matchMedia("(pointer: coarse)").matches);
-            const minHeight = isTouch ? 230 : 180;
+            const minHeight = timelinePreviewsEnabled ? (isTouch ? 230 : 180) : (isTouch ? 160 : 150);
             if (newTimelineHeight >= minHeight && newTimelineHeight <= 400) {
                 timelineContainer.style.height = newTimelineHeight + "px";
                 timelineContainer.style.flex = `0 0 ${newTimelineHeight}px`;
@@ -8660,6 +8673,7 @@ async function initGaniEditorStartup() {
             moviePlaybackFrame = null;
             stopAllSounds();
             $("btnPlay").innerHTML = '<i class="fas fa-play"></i>';
+            redraw();
         } else {
             isPlaying = true;
             movieSoundFrameKeys.clear();
@@ -11177,6 +11191,7 @@ async function initGaniEditorStartup() {
     const settingsGifAnimations = $("settingsGifAnimationsCheckbox");
     const settingsLightEffects = $("settingsLightEffectsCheckbox");
     const settingsShowPlaceholders = $("settingsShowPlaceholdersCheckbox");
+    const settingsTimelinePreviews = $("settingsTimelinePreviewsCheckbox");
     const settingsSystemGroup = $("settingsSystemGroup");
     const settingsRegisterAssoc = $("settingsRegisterAssoc");
     const settingsRegisterAssocStatus = $("settingsRegisterAssocStatus");
@@ -11265,6 +11280,7 @@ async function initGaniEditorStartup() {
         const savedShowGaniGuides = localStorage.getItem("editorShowGaniGuides") !== "false";
         const savedGifAnimations = localStorage.getItem("editorGifAnimations") !== "false";
         const savedLightEffects = localStorage.getItem("editorLightEffects") !== "false";
+        const savedTimelinePreviews = localStorage.getItem("editorTimelinePreviews") !== "false";
         const savedSelectionBorderColor = localStorage.getItem("editorSelectionBorderColor") || "#00ff00";
         const savedSelectionBorderThickness = parseInt(localStorage.getItem("editorSelectionBorderThickness")) || 2;
         const savedSelectionBorderOpacity = parseInt(localStorage.getItem("editorSelectionBorderOpacity") ?? "100");
@@ -11395,6 +11411,29 @@ async function initGaniEditorStartup() {
             if (save) localStorage.setItem("editorLightEffects", enabled ? "true" : "false");
             redraw();
         }
+        function applyTimelinePreviews(enabled, save = true) {
+            timelinePreviewsEnabled = enabled;
+            if (save) localStorage.setItem("editorTimelinePreviews", enabled ? "true" : "false");
+            const container = document.querySelector(".timeline-container");
+            if (container) {
+                container.classList.toggle("timeline-flat", !enabled);
+                if (enabled) {
+                    container.style.removeProperty("height");
+                    container.style.removeProperty("flex");
+                    container.style.removeProperty("min-height");
+                } else {
+                    container.style.height = "150px";
+                    container.style.flex = "0 0 150px";
+                    container.style.minHeight = "150px";
+                }
+            }
+            requestAnimationFrame(() => {
+                const view = document.querySelector(".timeline-view");
+                if (view && timelineCanvas) timelineCanvas.height = view.clientHeight || 60;
+                drawTimeline();
+            });
+            resizeCanvas();
+        }
         function applySelectionBorderColor(color, save = true) {
             if (save) localStorage.setItem("editorSelectionBorderColor", color);
             redraw();
@@ -11416,6 +11455,7 @@ async function initGaniEditorStartup() {
         applyShowGaniGuides(savedShowGaniGuides);
         applyGifAnimations(savedGifAnimations);
         applyLightEffects(savedLightEffects);
+        applyTimelinePreviews(savedTimelinePreviews);
         applySelectionBorderColor(savedSelectionBorderColor, false);
         applySelectionBorderThickness(savedSelectionBorderThickness, false);
         const updateUIScaleDisplay = (value) => {
@@ -11437,6 +11477,7 @@ async function initGaniEditorStartup() {
             const currentShowGaniGuides = localStorage.getItem("editorShowGaniGuides") !== "false";
             const currentGifAnimations = localStorage.getItem("editorGifAnimations") !== "false";
             const currentLightEffects = localStorage.getItem("editorLightEffects") !== "false";
+            const currentTimelinePreviews = localStorage.getItem("editorTimelinePreviews") !== "false";
             const _cssColor = getComputedStyle(document.documentElement).getPropertyValue("--selection-border-color").trim();
             const currentSelectionBorderColor = _cssColor || localStorage.getItem("editorSelectionBorderColor") || "#00ff00";
             const currentSelectionBorderThickness = parseInt(localStorage.getItem("editorSelectionBorderThickness")) || 2;
@@ -11453,6 +11494,7 @@ async function initGaniEditorStartup() {
                 showGaniGuides: currentShowGaniGuides,
                 gifAnimations: currentGifAnimations,
                 lightEffects: currentLightEffects,
+                timelinePreviews: currentTimelinePreviews,
                 showPlaceholders: localStorage.getItem("editorShowPlaceholders") !== "false",
                 selectionBorderColor: currentSelectionBorderColor,
                 selectionBorderThickness: currentSelectionBorderThickness,
@@ -11472,6 +11514,7 @@ async function initGaniEditorStartup() {
             if (settingsShowGaniGuides) settingsShowGaniGuides.textContent = currentShowGaniGuides ? "✓" : " ";
             if (settingsGifAnimations) settingsGifAnimations.textContent = currentGifAnimations ? "✓" : " ";
             if (settingsLightEffects) settingsLightEffects.textContent = currentLightEffects ? "✓" : " ";
+            if (settingsTimelinePreviews) settingsTimelinePreviews.textContent = currentTimelinePreviews ? "✓" : " ";
             if (settingsShowPlaceholders) settingsShowPlaceholders.textContent = localStorage.getItem("editorShowPlaceholders") !== "false" ? "✓" : " ";
             if (settingsSelectionBorderColor) settingsSelectionBorderColor.value = currentSelectionBorderColor;
             if (settingsSelectionBorderThickness) {
@@ -11563,6 +11606,13 @@ async function initGaniEditorStartup() {
                 applyLightEffects(newValue, false);
             };
         }
+        if (settingsTimelinePreviews) {
+            settingsTimelinePreviews.onclick = () => {
+                const newValue = settingsTimelinePreviews.textContent.trim() !== "✓";
+                settingsTimelinePreviews.textContent = newValue ? "✓" : " ";
+                applyTimelinePreviews(newValue, false);
+            };
+        }
         if (settingsAutoSave) {
             settingsAutoSave.onclick = () => {
                 const newValue = settingsAutoSave.textContent.trim() !== "✓";
@@ -11651,6 +11701,7 @@ async function initGaniEditorStartup() {
                 if (settingsShowGaniGuides) applyShowGaniGuides(settingsShowGaniGuides.textContent.trim() === "✓", true);
                 if (settingsGifAnimations) applyGifAnimations(settingsGifAnimations.textContent.trim() === "✓", true);
                 if (settingsLightEffects) applyLightEffects(settingsLightEffects.textContent.trim() === "✓", true);
+                if (settingsTimelinePreviews) applyTimelinePreviews(settingsTimelinePreviews.textContent.trim() === "✓", true);
                 if (settingsShowPlaceholders) { localStorage.setItem("editorShowPlaceholders", settingsShowPlaceholders.textContent.trim() === "✓" ? "true" : "false"); redraw(); }
                 if (settingsSelectionBorderColor) applySelectionBorderColor(settingsSelectionBorderColor.value, true);
                 if (settingsSelectionBorderThickness) applySelectionBorderThickness(parseInt(settingsSelectionBorderThickness.value) || 2, true);
@@ -11672,6 +11723,7 @@ async function initGaniEditorStartup() {
             applyShowGaniGuides(originalSettings.showGaniGuides, false);
             applyGifAnimations(originalSettings.gifAnimations, false);
             applyLightEffects(originalSettings.lightEffects, false);
+            applyTimelinePreviews(originalSettings.timelinePreviews, false);
             applySelectionBorderColor(originalSettings.selectionBorderColor || "#00ff00", false);
             applySelectionBorderThickness(originalSettings.selectionBorderThickness || 2, false);
             applySelectionBorderOpacity(originalSettings.selectionBorderOpacity ?? 100, false);
@@ -11756,6 +11808,7 @@ async function initGaniEditorStartup() {
             if (settingsShowGaniGuides) settingsShowGaniGuides.textContent = originalSettings.showGaniGuides ? "✓" : " ";
             if (settingsGifAnimations) settingsGifAnimations.textContent = originalSettings.gifAnimations ? "✓" : " ";
             if (settingsLightEffects) settingsLightEffects.textContent = originalSettings.lightEffects ? "✓" : " ";
+            if (settingsTimelinePreviews) settingsTimelinePreviews.textContent = originalSettings.timelinePreviews ? "✓" : " ";
             if (settingsShowPlaceholders) settingsShowPlaceholders.textContent = originalSettings.showPlaceholders ? "✓" : " ";
             if (settingsSelectionBorderColor) settingsSelectionBorderColor.value = originalSettings.selectionBorderColor || "#00ff00";
             if (settingsSelectionBorderThickness) {
@@ -11817,6 +11870,10 @@ async function initGaniEditorStartup() {
                 if (settingsLightEffects) {
                     settingsLightEffects.textContent = "✓";
                     applyLightEffects(true, false);
+                }
+                if (settingsTimelinePreviews) {
+                    settingsTimelinePreviews.textContent = "✓";
+                    applyTimelinePreviews(true, false);
                 }
                 if (settingsSelectionBorderColor) {
                     settingsSelectionBorderColor.value = "#00ff00";

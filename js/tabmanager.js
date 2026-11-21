@@ -422,7 +422,7 @@ const TabManager = {
         el.dataset.tabId = entry.id;
         el.dataset.tabType = entry.type;
         el.draggable = false;
-        el.innerHTML = `<span class="tab-name">${entry.name}</span><span class="tab-close">×</span>`;
+        el.innerHTML = `<span class="tab-name">${entry.name}</span><span class="tab-close">x</span>`;
         const closeBtn = el.querySelector('.tab-close');
         const iconMarkup = this._getTabIconHTML(entry);
         if (iconMarkup) el.insertAdjacentHTML('afterbegin', iconMarkup);
@@ -467,7 +467,7 @@ const TabManager = {
         }
         const iconMap = {
             level: { src: 'icons/rcfiles_nw.png', cls: '' },
-            gani: { src: 'icons/user.svg', cls: 'svg-icon' },
+            gani: { src: 'icons/actor_glyph.bmp', cls: '' },
             beautify: { src: 'icons/code.svg', cls: 'svg-icon' },
             levelgen: { src: 'icons/levelgen.ico', cls: '' },
             particleemu: { src: 'icons/particleemu.png', cls: '' },

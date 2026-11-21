@@ -1,7 +1,7 @@
 [
   {
     "version": "0.1.86",
-    "date": "2026-11-10",
+    "date": "2026-11-21",
     "tag": "GSuite",
     "changes": [
       "Particle Emulator supports advancetime(seconds), removemodifiers(), removeparticles() and isfrozen, and exposes emittedparticles and currentparticlecount",
@@ -30,7 +30,13 @@
       "Tileset type 5 is exposed as Terrain and used by terrain gmaps; type 0/1 remain the normal tilesets",
       "Player and NPC names, chat and carried items stay attached to the terrain surface",
       "Terrain panel can raise or lower the whole terrain and edit the corner heightmap",
-      "Fixed go run and go build failing with an inconsistent vendoring error by moving the bundled Monaco and PeerJS assets out of the Go vendor directory"
+      "Fixed go run and go build failing with an inconsistent vendoring error by moving the bundled Monaco and PeerJS assets out of the Go vendor directory",
+      "Gani movie playback no longer re-renders timeline previews every frame, keeping long movies such as an 800-frame intro at a normal frame rate",
+      "Gani tabs use the character actor icon and a pixel-style close button",
+      "Added a Timeline Frame Previews setting; disabling it uses compact flat frame bars and a shorter timeline",
+      "Movie mode appearance defaults now use the same collapsible Defaults table as sprite mode",
+      "Fixed the timeline header clipping the Frames label and the frame counter overlapping the scrubber for three-digit frame counts",
+      "Temporarily hid the experimental P2P collab buttons in both editors"
     ]
   },
   {
