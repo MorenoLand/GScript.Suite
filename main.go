@@ -24,6 +24,9 @@ var assets embed.FS
 var updaterPublicKey []byte
 
 func main() {
+	if runStdioBridge() {
+		return
+	}
 	if runtime.GOOS == "linux" {
 		_ = os.Setenv("WEBKIT_DISABLE_SANDBOX_THIS_IS_DANGEROUS", "1")
 	}
@@ -32,6 +35,8 @@ func main() {
 	var mainWindow *application.WebviewWindow
 	app = newApplication(service, &mainWindow)
 	service.app = app
+	service.startMCP()
+	defer service.stopMCP()
 	provider, err := endpoint.New(endpoint.Config{URL: updaterManifestURL})
 	if err == nil {
 		if err := app.Updater.Init(updater.Config{CurrentVersion: appVersion, PublicKey: updaterPublicKey, Providers: []updater.Provider{provider}}); err != nil {
