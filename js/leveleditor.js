@@ -470,7 +470,7 @@ class Level {
                 while (blayer >= level.layers.length) level.layers.push(level.createEmptyLayer());
                 for (let ii = 0; ii < bw && ii * 2 + 1 < td.length; ii++) {
                     const pair = td.substring(ii * 2, ii * 2 + 2);
-                    if (pair === '//') continue;
+                    if (pair === '//' && blayer > 0) continue; // on the ground layer // is tile 4095, a real tile
                     const b1 = base64.indexOf(pair[0]), b2 = base64.indexOf(pair[1]);
                     if (b1 < 0 || b2 < 0) continue;
                     const g = (b1 << 6) + b2;
@@ -2134,14 +2134,29 @@ class LevelEditor {
         this.syncObjectSelection();
     }
 
+    // Each level has its own undo history: a snapshot of one level must never be restored into
+    // another. undoStack and redoStack always point at the history of the level being edited.
+    _keepUndoForLevel() {
+        if (!this._undoHistories) this._undoHistories = new WeakMap();
+        let history = this.level ? this._undoHistories.get(this.level) : null;
+        if (!history) {
+            history = { undo: [], redo: [] };
+            if (this.level) this._undoHistories.set(this.level, history);
+        }
+        this.undoStack = history.undo;
+        this.redoStack = history.redo;
+    }
+
     pushUndo() {
+        this._keepUndoForLevel();
         this.undoStack.push(this._captureSnapshot());
         if (this.undoStack.length > 50) this.undoStack.shift();
-        this.redoStack = [];
+        this.redoStack.length = 0;
         this.invalidateLayerCache();
     }
 
     undo() {
+        this._keepUndoForLevel();
         if (!this.undoStack.length) return;
         this.redoStack.push(this._captureSnapshot());
         this._restoreSnapshot(this.undoStack.pop());
@@ -2149,6 +2164,7 @@ class LevelEditor {
     }
 
     redo() {
+        this._keepUndoForLevel();
         if (!this.redoStack.length) return;
         this.undoStack.push(this._captureSnapshot());
         this._restoreSnapshot(this.redoStack.pop());
@@ -6127,11 +6143,21 @@ class LevelEditor {
         if (!raw) return;
         const base = raw.replace(/\.(nw|graal|zelda)$/i, '');
         const variants = [raw, base + '.nw', base + '.graal', base + '.zelda'];
-        const existing = this.levels.findIndex(l => variants.some(v => v.toLowerCase() === (l.name||'').toLowerCase()));
+        const named = name => variants.some(v => v.toLowerCase() === String(name || '').replace(/^"|"$/g, '').toLowerCase());
+        const bare = name => String(name || '').replace(/^"|"$/g, '').replace(/\.(nw|graal|zelda)$/i, '').toLowerCase();
+        const inGrid = name => bare(name) === base.toLowerCase();
+        const existing = this.levels.findIndex(l => named(l.name));
+        // A level that belongs to an open gmap is entered inside that gmap, at the level's place in it.
+        const gmap = existing >= 0 ? -1 : this.levels.findIndex(l => l.gmapGrid?.some(row => row.some(inGrid)));
+        let cellX = 0, cellY = 0;
         if (existing >= 0) {
             this.switchLevel(existing);
             this._warpCooldown = 0.5;
             this._activeLinkObjs = new Set();
+        } else if (gmap >= 0) {
+            cellY = this.levels[gmap].gmapGrid.findIndex(row => row.some(inGrid));
+            cellX = this.levels[gmap].gmapGrid[cellY].findIndex(inGrid);
+            if (gmap !== this.currentLevelIndex) this.switchLevel(gmap);
         } else {
             let level = null, usedName = null;
             for (const n of variants) {
@@ -6149,8 +6175,10 @@ class LevelEditor {
         }
         const tw = this.level.tileWidth || 16, th = this.level.tileHeight || 16;
         const p = this._player;
-        p.x = parseFloat(props.nextX || 0) * tw;
-        p.y = parseFloat(props.nextY || 0) * th;
+        // "playerx" / "playery" keep that coordinate, measured inside the level the player was in.
+        const arrive = (target, current, cell, size) => (/^player[xy]$/i.test(String(target).trim()) ? current % (64 * size) : parseFloat(target || 0) * size) + cell * 64 * size;
+        p.x = arrive(props.nextX, p.x, cellX, tw);
+        p.y = arrive(props.nextY, p.y, cellY, th);
         p._boundsLocked = false;
         this._warpCooldown = 0.5;
         this._activeLinkObjs = new Set();
@@ -9100,6 +9128,8 @@ class LevelEditor {
             refreshCustomSelect(sel);
             fillObjects();
         };
+        // For code outside this panel that changes the tile object library (the MCP tools).
+        this._fillTileObjectGroups = fillGroups;
         const updateDeleteBtn = () => {
             const btn = this.$('btnDeleteTileObject');
             if (!btn) return;
