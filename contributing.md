@@ -12,7 +12,9 @@ Install dependencies with `pnpm install --frozen-lockfile`.
 
 ## Checks
 
-Run `go test -mod=mod ./...` and `git diff --check` before opening a pull request.
+Run `go test -mod=mod ./...`, `npm test` and `git diff --check` before opening a pull request.
+
+The MCP server in `mcp/` has no GUI dependencies, so `go test -mod=mod ./mcp/` runs on a machine without the WebView development packages. [docs/mcp.md](./docs/mcp.md) explains how the server and its tools (`js/mcp/`) fit together.
 
 ## Release builds
 
