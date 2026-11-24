@@ -30,10 +30,9 @@ func (s *Server) handler() http.Handler {
 //
 // The server only binds loopback, so what remains is a web page in the user's
 // browser reaching it. The Host check stops DNS rebinding. A request that
-// carries an Origin header comes from a web page: it is refused unless the page
-// is served from this machine and a token is configured, which the page then
-// has to present like any other client. Without a token, only programs that are
-// not web pages (MCP clients, the stdio bridge) can connect.
+// carries an Origin header comes from a web page and must come from this
+// machine. Every request has to present the configured bearer token; a server
+// with no token refuses everything.
 func (s *Server) guard(next http.Handler) http.Handler {
 	return http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
 		if !isLoopbackHost(r.Host) {
@@ -45,10 +44,6 @@ func (s *Server) guard(next http.Handler) http.Handler {
 				http.Error(w, "forbidden origin", http.StatusForbidden)
 				return
 			}
-			if s.config().Token == "" {
-				http.Error(w, "web pages can only connect when a token is set in GSuite's MCP settings", http.StatusForbidden)
-				return
-			}
 			w.Header().Set("Access-Control-Allow-Origin", origin)
 			w.Header().Set("Vary", "Origin")
 			w.Header().Set("Access-Control-Allow-Headers", "Content-Type, Accept, Authorization, Mcp-Session-Id, Mcp-Protocol-Version, Last-Event-ID")
@@ -58,13 +53,16 @@ func (s *Server) guard(next http.Handler) http.Handler {
 			w.WriteHeader(http.StatusNoContent)
 			return
 		}
-		if token := s.config().Token; token != "" {
-			given := strings.TrimPrefix(r.Header.Get("Authorization"), "Bearer ")
-			if subtle.ConstantTimeCompare([]byte(given), []byte(token)) != 1 {
-				w.Header().Set("WWW-Authenticate", "Bearer")
-				http.Error(w, "missing or wrong token", http.StatusUnauthorized)
-				return
-			}
+		token := s.config().Token
+		if token == "" {
+			http.Error(w, "the MCP token is not configured", http.StatusServiceUnavailable)
+			return
+		}
+		given := strings.TrimPrefix(r.Header.Get("Authorization"), "Bearer ")
+		if subtle.ConstantTimeCompare([]byte(given), []byte(token)) != 1 {
+			w.Header().Set("WWW-Authenticate", "Bearer")
+			http.Error(w, "missing or wrong token", http.StatusUnauthorized)
+			return
 		}
 		next.ServeHTTP(w, r)
 	})

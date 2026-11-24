@@ -14,7 +14,7 @@ import (
 	"github.com/wailsapp/wails/v3/pkg/updater/providers/endpoint"
 )
 
-const appVersion = "0.1.86"
+const appVersion = "0.1.87"
 const updaterManifestURL = "https://github.com/MorenoLand/GScript.GSuite/releases/latest/download/latest.json"
 
 //go:embed all:frontend

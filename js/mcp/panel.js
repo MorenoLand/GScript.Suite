@@ -91,12 +91,12 @@
             <div style="margin-top:12px;display:flex;gap:14px;align-items:center;flex-wrap:wrap;">
                 <label style="display:flex;gap:6px;align-items:center;cursor:pointer;"><input type="checkbox" data-mcp="enabled" ${s.enabled ? 'checked' : ''}> Enabled</label>
                 <label style="display:flex;gap:6px;align-items:center;">Port <input data-mcp="port" type="text" inputmode="numeric" value="${s.port || ''}" style="${INPUT}width:70px;"></label>
-                <label style="display:flex;gap:6px;align-items:center;flex:1;min-width:180px;">Token <input data-mcp="token" type="text" value="${escapeHTML(s.token || '')}" placeholder="optional" style="${INPUT}flex:1;min-width:0;"></label>
+                <label style="display:flex;gap:6px;align-items:center;flex:1;min-width:180px;">Token <input data-mcp="token" type="text" value="${escapeHTML(s.token || '')}" placeholder="required" style="${INPUT}flex:1;min-width:0;"></label>
                 <button data-mcp="apply" style="${BUTTON}">Apply</button>
             </div>
-            <div style="margin-top:6px;color:#888;">The server only accepts connections from programs on this computer. A token, when set, must be sent as a Bearer authorization header; web pages can only connect with one.</div>
-            ${s.running ? snippet('Claude Code', `claude mcp add --transport http gsuite ${s.url}`) : ''}
-            ${s.running ? snippet('Clients that connect over HTTP', s.url) : ''}
+            <div style="margin-top:6px;color:#888;">The server only accepts connections from programs on this computer. Every client must send the token as a Bearer authorization header.</div>
+            ${s.running ? snippet('Claude Code', `claude mcp add --transport http gsuite ${s.url} --header "Authorization: Bearer ${s.token}"`) : ''}
+            ${s.running ? snippet('Clients that connect over HTTP', `${s.url}\nAuthorization: Bearer ${s.token}`) : ''}
             ${snippet('Clients that start a command (Claude Desktop, Cursor, ...)', stdio)}
             <div style="margin-top:14px;padding-top:10px;border-top:1px solid #2a2a2a;color:#c0c0c0;">Remote Control</div>
             <div style="margin-top:4px;color:#888;">Also gives agents the tools of Remote Control (rc_...), so what they build here can be sent to the game server Remote Control is connected to. Those tools act on the live server. Remote Control decides what is allowed and asks you before a change: see its Options &gt; MCP, which must be turned on there too.</div>

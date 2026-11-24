@@ -36,7 +36,7 @@ A link is a rectangle that warps the player. Get every one of these right:
 - The target level must exist: create it and save it into the same folder.
 
 ## NPCs and scripts
-- Do not write GraalScript from memory. GSuite ships a human-verified GraalScript reference: search it with script_docs_search (verified matches come first), read sections with script_docs_read, and confirm a function's name and argument order with script_reference (api.gscript.dev). The guide "gscript" is the short version.
+- Do not write GraalScript from memory. Confirm a function's name and argument order with script_reference (api.gscript.dev), and search the user's own script folders with script_examples_search. The guide "gscript" is the short version.
 - In GS2, join strings with @ (never +) and give every variable its prefix (this., temp., player., client., server.). Event names are exact and case-sensitive (onPlayerTouchsMe).
 - Run script_check on every script you write.
 - An NPC's image must exist: app_list_bundled_files and workspace_find_files list what does; app_view_image shows one.
@@ -124,7 +124,7 @@ GSuite edits the content of Graal Online style 2D games. These tools drive the r
 ## What you can build
 - **Levels**: 64x64-tile maps (\`.nw\` text format; \`.graal\`/\`.zelda\` legacy binary). Layers of tiles from a tileset image, plus objects: NPCs (scripted objects), links (warps), signs, chests and baddies.
 - **Gmaps**: a \`.gmap\` file lays levels out on a grid so they join into one seamless world. In the editor a gmap is one big level.
-- **NPC scripts**: GraalScript (GS1 or GS2) stored in each NPC. See the guide "gscript"; a human-verified reference ships with GSuite (script_docs_search).
+- **NPC scripts**: GraalScript (GS1 or GS2) stored in each NPC. See the guide "gscript" and confirm functions with script_reference.
 - **Animations**: \`.gani\` files: sprites cut from images, placed per frame and per direction. A \`.gani\` can also be a **movie**: a cutscene with actors, texts, sprites and sounds placed on a timeline by keyframes.
 - **Particle effects**: GS2 emitter scripts, previewed in ParticleEmu and exported as GIF, animated PNG or video.
 - **Shapes**: setshape2 / setimgpart statements for NPC collision and sprite sheets.
@@ -140,7 +140,7 @@ GSuite edits the content of Graal Online style 2D games. These tools drive the r
 | npc_library_ | NPC templates shipped with the app |
 | gani_ | animations and movies: sprites, frames, keyframes, pictures of them, GIF and video export |
 | particle_ | particle effects: the script, pictures of it over time, export |
-| setshape_, script_ | setshape2/setimgpart code, formatting, syntax check, the function reference (api.gscript.dev) and the bundled GraalScript guides |
+| setshape_, script_ | setshape2/setimgpart code, formatting, syntax check, the function reference (api.gscript.dev) and examples from the user's own script folders |
 | remote_, rc_ | a live game server through Remote Control, only when the user turned that bridge on (guide "remote-control") |
 
 ## Conventions
@@ -150,7 +150,7 @@ GSuite edits the content of Graal Online style 2D games. These tools drive the r
 - **Nothing is on disk until you save.** level_save and gani_save write files; paths are absolute. app_get_state gives the home, documents and workspace folders.
 - **Undo**: each tool call that edits tiles, objects, sprites or frames is one undo step (level_undo, gani_undo); every open level and animation has its own history.
 - **See your work**: level_screenshot, gani_render_sheet, gani_render, gani_render_movie, particle_render and app_screenshot return images; level_export_image writes a picture of a level or gmap to a PNG file.
-- **Learn from what ships with the app**: level_open with bundled opens finished example levels, gani_open with bundled the classic player animations, npc_library_list the NPC templates, and script_docs_search the GraalScript documentation.
+- **Learn from what ships with the app**: level_open with bundled opens finished example levels, gani_open with bundled the classic player animations, and npc_library_list the NPC templates.
 
 ## If something is not covered
 app_eval_js runs JavaScript in the app with access to all editor state. Prefer the dedicated tools: they keep undo, redraw and unsaved-change tracking right.`,
@@ -293,12 +293,12 @@ Create one with gmap_new (flat), world_generate (from a terrain map) or gmap_fro
 
         'gscript': {
             title: 'GraalScript for NPCs',
-            summary: 'What NPC scripts need, from the human-verified reference, and how to look up the rest',
+            summary: 'What NPC scripts need and how to look up the rest',
             text: `# GraalScript for NPCs
 
-This primer is drawn from the human-verified GraalScript Reference that ships with GSuite, and covers what level NPCs need. Do not write GraalScript from memory:
-- script_docs_search searches that reference and the other bundled guides (verified matches first); script_docs_read reads a section in full.
+This primer covers what level NPCs need. Do not write GraalScript from memory:
 - script_reference looks a function up at api.gscript.dev: its parameters in order, where it runs, an example.
+- script_examples_search searches the user's own script folders for real uses.
 - script_check finds structural mistakes (unclosed braces, missing parentheses) in a script before you place it.
 
 
@@ -422,7 +422,7 @@ GS1 style (reference): \`if (created) { showcharacter; setcharprop #c, Hello the
 ## In GSuite
 - The level editor does not run scripts, but it reads a few statements to draw NPCs as they will look: showcharacter, setcharani, this.head / body / shield / colors / nick / dir, setimgpart, setshape / setshape2, setcoloreffect, setzoomeffect, and addtiledef / addtiledef2. Play mode shows say2 text from onPlayerTouchsMe when the NPC is touched.
 - npc_library_list returns the NPC templates GSuite ships (written in GS1).
-- Scripts from real servers are good examples of how things are done in practice. If a checkout of the GS2Taco repository is on this machine, fs_search_text over its refs folder finds real uses of a function; treat what you find as unverified.`,
+- Scripts from real servers are good examples of how things are done in practice. If a checkout of a script repository is on this machine, search its refs folder with script_examples_search to find real uses of a function; treat what you find as unverified.`,
         },
 
         'gani-format': {
@@ -495,7 +495,7 @@ app_view_image shows an image with pixel coordinates (try "sprites.png", "head19
             summary: 'Writing emitter scripts and previewing them',
             text: `# GS2 particle effects
 
-A particle effect is an emitter on an image shown with showimg. The authority on emitter and particle properties is the verified reference: script_docs_read with doc "graalscript-reference" and section "GS2 Particle Emitters". particle_render shows any script as snapshots over time, particle_set_code runs it in the ParticleEmu tab for the user, and particle_load_preset returns working scripts to start from.
+A particle effect is an emitter on an image shown with showimg. particle_render shows any script as snapshots over time, particle_set_code runs it in the ParticleEmu tab for the user, and particle_load_preset returns working scripts to start from.
 
 \`\`\`
 //#CLIENTSIDE
@@ -583,7 +583,7 @@ Work like this:
 
 What it should do: ${args.behaviour || '(ask me)'}
 
-Read app_get_guide "gscript", then look up what the behaviour needs in the verified reference (script_docs_search, script_docs_read) and confirm each function with script_reference. Write the script in GS2, run script_check on it, then place it with level_add_npc at a sensible spot (take a level_screenshot first to choose one). Show me the script and a screenshot of where it stands.`);
+Read app_get_guide "gscript", then confirm what the behaviour needs with script_reference and search the user's script folders with script_examples_search. Write the script in GS2, run script_check on it, then place it with level_add_npc at a sensible spot (take a level_screenshot first to choose one). Show me the script and a screenshot of where it stands.`);
 
     mcp.prompt({
         name: 'create_animation',

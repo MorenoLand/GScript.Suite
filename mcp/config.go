@@ -1,6 +1,8 @@
 package mcp
 
 import (
+	"crypto/rand"
+	"encoding/hex"
 	"encoding/json"
 	"os"
 	"path/filepath"
@@ -40,6 +42,15 @@ type Endpoint struct {
 // DefaultConfig returns the configuration used when no config file exists.
 func DefaultConfig() Config {
 	return Config{Enabled: true, Port: DefaultPort}
+}
+
+// NewToken returns a random token for the MCP bearer authorization.
+func NewToken() string {
+	var data [32]byte
+	if _, err := rand.Read(data[:]); err != nil {
+		return ""
+	}
+	return hex.EncodeToString(data[:])
 }
 
 // ConfigDir returns the directory that holds GSuite's MCP config and endpoint files.

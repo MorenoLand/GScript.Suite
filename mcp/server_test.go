@@ -56,10 +56,21 @@ func (f *fakeFrontend) emit(event string, data any) {
 	}()
 }
 
+// testToken is the bearer token the test servers expect.
+const testToken = "test-token"
+
+// newTokenServer returns a server whose configuration already holds the test token.
+func newTokenServer(opts Options) *Server {
+	server := New(opts)
+	server.saved = Config{Enabled: true, Port: DefaultPort, Token: testToken}
+	server.cfg = server.saved
+	return server
+}
+
 func newTestServer(t *testing.T, register bool) (*Server, *fakeFrontend, *httptest.Server) {
 	t.Helper()
 	front := &fakeFrontend{}
-	server := New(Options{Version: "9.9.9", ConfigDir: t.TempDir(), Emit: front.emit, ReadyTimeout: 200 * time.Millisecond})
+	server := newTokenServer(Options{Version: "9.9.9", ConfigDir: t.TempDir(), Emit: front.emit, ReadyTimeout: 200 * time.Millisecond})
 	front.server = server
 	if register {
 		if err := server.RegisterFrontend("page-1", testManifest); err != nil {
@@ -78,6 +89,9 @@ func post(t *testing.T, url, body string, headers map[string]string) (*http.Resp
 		t.Fatal(err)
 	}
 	req.Header.Set("Content-Type", "application/json")
+	if _, ok := headers["Authorization"]; !ok {
+		req.Header.Set("Authorization", "Bearer "+testToken)
+	}
 	for key, value := range headers {
 		if key == "Host" {
 			req.Host = value
@@ -166,6 +180,48 @@ func TestListFailsUntilTheFrontendRegisters(t *testing.T) {
 	}
 }
 
+func TestEveryRequestNeedsTheToken(t *testing.T) {
+	_, _, ts := newTestServer(t, true)
+	resp, data := post(t, ts.URL, `{}`, map[string]string{"Authorization": ""})
+	if resp.StatusCode != http.StatusUnauthorized || resp.Header.Get("WWW-Authenticate") != "Bearer" || !strings.Contains(string(data), "missing or wrong token") {
+		t.Fatalf("no token: %d %s", resp.StatusCode, data)
+	}
+	resp, data = post(t, ts.URL, `{}`, map[string]string{"Authorization": "Bearer wrong"})
+	if resp.StatusCode != http.StatusUnauthorized {
+		t.Fatalf("wrong token: %d %s", resp.StatusCode, data)
+	}
+	resp, data = post(t, ts.URL, `{"jsonrpc":"2.0","id":1,"method":"tools/list"}`, nil)
+	if resp.StatusCode != http.StatusOK {
+		t.Fatalf("right token: %d %s", resp.StatusCode, data)
+	}
+}
+
+func TestAServerWithoutATokenRefusesEveryRequest(t *testing.T) {
+	server := New(Options{ConfigDir: t.TempDir()})
+	ts := httptest.NewServer(server.handler())
+	defer ts.Close()
+	resp, data := post(t, ts.URL, `{}`, map[string]string{"Authorization": "Bearer anything"})
+	if resp.StatusCode != http.StatusServiceUnavailable || !strings.Contains(string(data), "not configured") {
+		t.Fatalf("status %d: %s", resp.StatusCode, data)
+	}
+}
+
+func TestStartGeneratesAndKeepsAToken(t *testing.T) {
+	dir := t.TempDir()
+	if err := SaveConfig(dir, Config{Enabled: true, Port: freePort(t)}); err != nil {
+		t.Fatal(err)
+	}
+	server := New(Options{ConfigDir: dir})
+	if err := server.Start(); err != nil {
+		t.Fatal(err)
+	}
+	defer server.Stop()
+	token := LoadConfig(dir).Token
+	if len(token) != 64 || server.Status().Token != token {
+		t.Fatalf("token = %q, status = %q", token, server.Status().Token)
+	}
+}
+
 func TestToolCallIsRelayedToTheFrontend(t *testing.T) {
 	_, front, ts := newTestServer(t, true)
 	got := rpc(t, ts.URL, `{"jsonrpc":"2.0","id":"a","method":"tools/call","params":{"name":"echo","arguments":{"x":1}}}`)
@@ -200,7 +256,7 @@ func TestToolCallErrors(t *testing.T) {
 }
 
 func TestFrontendErrorsPassThrough(t *testing.T) {
-	server := New(Options{ConfigDir: t.TempDir()})
+	server := newTokenServer(Options{ConfigDir: t.TempDir()})
 	server.bridge.emit = func(event string, data any) {
 		go server.Resolve(data.(requestEvent).ID, `{"error":{"code":-32002,"message":"Resource not found"}}`)
 	}
@@ -253,8 +309,9 @@ func TestNotificationsAndBatches(t *testing.T) {
 }
 
 func TestGuardRejectsForeignRequests(t *testing.T) {
-	server, _, ts := newTestServer(t, true)
+	_, _, ts := newTestServer(t, true)
 	ping := `{"jsonrpc":"2.0","id":1,"method":"ping"}`
+	local := map[string]string{"Origin": "http://localhost:6274"}
 	cases := []struct {
 		name    string
 		headers map[string]string
@@ -264,8 +321,7 @@ func TestGuardRejectsForeignRequests(t *testing.T) {
 		{"rebound host", map[string]string{"Host": "evil.example:47848"}, http.StatusForbidden},
 		{"foreign origin", map[string]string{"Origin": "https://evil.example"}, http.StatusForbidden},
 		{"null origin", map[string]string{"Origin": "null"}, http.StatusForbidden},
-		// A page on this machine is still a web page: without a token it gets nothing.
-		{"local page, no token set", map[string]string{"Origin": "http://localhost:6274"}, http.StatusForbidden},
+		{"local page, no token", map[string]string{"Origin": "http://localhost:6274", "Authorization": ""}, http.StatusUnauthorized},
 	}
 	for _, tc := range cases {
 		resp, _ := post(t, ts.URL, ping, tc.headers)
@@ -274,25 +330,11 @@ func TestGuardRejectsForeignRequests(t *testing.T) {
 		}
 	}
 
-	server.mu.Lock()
-	server.cfg.Token = "secret"
-	server.mu.Unlock()
-	if resp, _ := post(t, ts.URL, ping, nil); resp.StatusCode != http.StatusUnauthorized {
-		t.Errorf("missing token status = %d", resp.StatusCode)
-	}
-	if resp, _ := post(t, ts.URL, ping, map[string]string{"Authorization": "Bearer secret"}); resp.StatusCode != http.StatusOK {
-		t.Errorf("right token status = %d", resp.StatusCode)
-	}
-	local := map[string]string{"Origin": "http://localhost:6274"}
-	if resp, _ := post(t, ts.URL, ping, local); resp.StatusCode != http.StatusUnauthorized {
-		t.Errorf("local page without the token: status = %d", resp.StatusCode)
-	}
-	local["Authorization"] = "Bearer secret"
 	resp, _ := post(t, ts.URL, ping, local)
 	if resp.StatusCode != http.StatusOK || resp.Header.Get("Access-Control-Allow-Origin") != "http://localhost:6274" {
 		t.Errorf("local page with the token: status = %d, CORS header %q", resp.StatusCode, resp.Header.Get("Access-Control-Allow-Origin"))
 	}
-	if resp, _ := post(t, ts.URL, ping, map[string]string{"Origin": "https://evil.example", "Authorization": "Bearer secret"}); resp.StatusCode != http.StatusForbidden {
+	if resp, _ := post(t, ts.URL, ping, map[string]string{"Origin": "https://evil.example"}); resp.StatusCode != http.StatusForbidden {
 		t.Errorf("foreign page with the token: status = %d", resp.StatusCode)
 	}
 }
@@ -301,7 +343,7 @@ func TestAbandonedRequestsAreCancelledInTheFrontend(t *testing.T) {
 	var mu sync.Mutex
 	var request requestEvent
 	cancelled := make(chan string, 1)
-	server := New(Options{ConfigDir: t.TempDir()})
+	server := newTokenServer(Options{ConfigDir: t.TempDir()})
 	server.bridge.emit = func(event string, data any) {
 		switch event {
 		case RequestEvent:
@@ -370,6 +412,7 @@ func TestStreamAnnouncesListChanges(t *testing.T) {
 	server, _, ts := newTestServer(t, true)
 	req, _ := http.NewRequest(http.MethodGet, ts.URL+"/mcp", nil)
 	req.Header.Set("Accept", "text/event-stream")
+	req.Header.Set("Authorization", "Bearer "+testToken)
 	resp, err := http.DefaultClient.Do(req)
 	if err != nil {
 		t.Fatal(err)

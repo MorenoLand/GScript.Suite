@@ -110,8 +110,20 @@ func New(opts Options) *Server {
 func (s *Server) Start() error {
 	s.mu.Lock()
 	defer s.mu.Unlock()
-	s.saved = LoadConfig(s.opts.ConfigDir)
-	s.cfg = s.saved.withEnv()
+	saved := LoadConfig(s.opts.ConfigDir)
+	cfg := saved.withEnv()
+	if cfg.Enabled && cfg.Token == "" {
+		cfg.Token = NewToken()
+		if cfg.Token == "" {
+			return errors.New("could not generate an MCP token")
+		}
+		saved.Token = cfg.Token
+		if err := SaveConfig(s.opts.ConfigDir, saved); err != nil {
+			return err
+		}
+	}
+	s.saved = saved
+	s.cfg = cfg
 	s.applyRemoteLocked()
 	return s.listenLocked()
 }
@@ -141,6 +153,12 @@ func (s *Server) Config() Config {
 // the agents that are connected.
 func (s *Server) Configure(cfg Config) (Status, error) {
 	cfg = cfg.normalized()
+	if cfg.Enabled && cfg.Token == "" {
+		cfg.Token = NewToken()
+		if cfg.Token == "" {
+			return s.Status(), errors.New("could not generate an MCP token")
+		}
+	}
 	s.mu.Lock()
 	saveErr := SaveConfig(s.opts.ConfigDir, cfg)
 	s.saved = cfg

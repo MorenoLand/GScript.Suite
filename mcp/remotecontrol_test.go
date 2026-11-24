@@ -154,7 +154,7 @@ func newRemoteServer(t *testing.T, mode string) (*Server, string, string) {
 			return os.Args[0], []string{"--mcp"}, nil
 		}}
 	}
-	if _, err := server.Configure(Config{RemoteControl: RemoteControlConfig{Enabled: true}}); err != nil {
+	if _, err := server.Configure(Config{Token: testToken, RemoteControl: RemoteControlConfig{Enabled: true}}); err != nil {
 		t.Fatal(err)
 	}
 	t.Cleanup(server.Stop)
@@ -413,7 +413,7 @@ func TestStoppingClosesTheRemoteControlConnection(t *testing.T) {
 		t.Fatal("expected a running child")
 	}
 	// Turning the bridge off ends the child; so does stopping the server.
-	if _, err := server.Configure(Config{}); err != nil {
+	if _, err := server.Configure(Config{Token: testToken}); err != nil {
 		t.Fatal(err)
 	}
 	select {

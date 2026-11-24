@@ -47,7 +47,7 @@ Then ask for what you want, for example: *"Build a small island world in ~/Docum
 | Seeing and exporting animations | `gani_render`, `gani_render_sheet`, `gani_export_gif`, `gani_export_video` |
 | Particles | `particle_render`, `particle_get_state`, `particle_set_code`, `particle_load_preset`, `particle_export` |
 | Shapes and scripts | `setshape_generate`, `setshape_parse`, `setshape_get`, `setshape_setimgpart`, `script_format`, `script_check` |
-| GraalScript reference | `script_reference`, `script_docs_list`, `script_docs_search`, `script_docs_read`, `script_examples_search` |
+| GraalScript reference | `script_reference`, `script_examples_search` |
 | Live servers (with the Remote Control bridge on) | `remote_status`, `remote_call`, `remote_upload`, `remote_download`, and every `rc_*` tool Remote Control offers |
 
 Each tool describes itself and its arguments to the client; that description is the reference. A few things hold for all of them:
@@ -62,7 +62,7 @@ Each tool describes itself and its arguments to the client; that description is 
 - **The server tells the agent how to work.** Its MCP `instructions` (which clients add to the agent's system prompt) are a set of rules: the conventions, how to place links so they work in both directions, and what to verify before calling a world finished. The same text is the guide `rules`.
 - **`level_check`** backs those rules up. It audits a level or gmap for links that cannot be reached or lead nowhere, arrivals inside walls, links with no way back, missing NPC images, script syntax errors and unset tiles, and says how to fix each.
 - **Guides** on the formats and the workflow are built in: `app_get_guide` (topics `rules`, `overview`, `world-building`, `tiles`, `level-format`, `gmap-format`, `gscript`, `gani-format`, `particles`, `remote-control`), also offered as MCP resources.
-- **A GraalScript reference is built in.** `script_reference` looks functions up at [api.gscript.dev](https://api.gscript.dev). `script_docs_search` and `script_docs_read` search and read the documentation shipped in `gscript/`: the same set Remote Control ships, copied from [GS2Taco](https://github.com/MorenoLand/GScript.GS2Taco) by `js/sync-gscript-docs.js` (the core reference, the basics, the reference documents, the raw function lists and the community wiki as text). The GraalScript Reference among them is human-verified and its matches are listed first; the lists and the wiki come last. `script_examples_search` searches folders of real scripts on your computer, such as a GS2Taco checkout with its `refs/`, once you name them under *My folders* in the GScript Reference dialog (the book button), which gives people the same lookups.
+- **A GraalScript reference is built in.** `script_reference` looks functions up at [api.gscript.dev](https://api.gscript.dev). `script_examples_search` searches folders of real scripts on this computer once you name them under *My folders* in the GScript Reference dialog (the book button).
 - **Movies.** A `.gani` can be a cutscene: actors, texts, sprites and sounds on a timeline. `gani_set_movie` and `gani_set_movie_keys` build one, `gani_get_movie` reads it, and `gani_render_movie` draws chosen frames side by side.
 - **Exports.** Animations as GIF (`gani_export_gif`, movies included) or MP4 / WebM video (`gani_export_video`); particle effects as GIF, animated PNG or WebM (`particle_export`); levels and worlds as PNG (`level_export_image`). Video and animated PNG use what the app's window offers, and a tool says so when a format is not available there.
 - **What ships with the app is reachable**: the example levels (`level_open` with `bundled`), the player animations (`gani_open`), NPC templates including the editor's Character (`npc_library_list`), the example theme (`app_get_custom_css`).
@@ -81,7 +81,7 @@ The tools were checked against the app itself: every action a person can take in
 
 ## Going live: the Remote Control bridge
 
-Everything above works on local files. [Remote Control](https://github.com/AlpaxisNet/RemoteControl) (RC), the Graal server administration client, has an MCP server of its own for working on a running game server: files, scripts, players, commands. GSuite can offer RC's tools next to its own, so an agent that built a world offline can also put it on the server, through one connection.
+Everything above works on local files. Remote Control (RC), the Graal server administration client, has an MCP server of its own for working on a running game server: files, scripts, players, commands. GSuite can offer RC's tools next to its own, so an agent that built a world offline can also put it on the server, through one connection.
 
 Turn it on in two places:
 
@@ -103,11 +103,11 @@ RC's dialogs and audit log do not say that a request came through GSuite, so GSu
 
 ## Settings and security
 
-The server listens on `127.0.0.1` only, so it is reachable from this computer and nowhere else. The `Host` header must be a loopback address, which stops DNS rebinding. Web pages are kept out: a request with an `Origin` header is refused unless the page is served from this computer and a token is set, which the page then has to send like any other client. Programs that are not web pages (MCP clients, the stdio bridge) connect without one.
+The server listens on `127.0.0.1` only, so it is reachable from this computer and nowhere else. The `Host` header must be a loopback address, which stops DNS rebinding. Every request must send `Authorization: Bearer <token>`. GSuite generates a token on the first start and shows it in the MCP dialog; the stdio bridge reads the same token from the settings.
 
 A connected agent can do what you can do in GSuite, including reading and writing files through the file tools and running JavaScript in the app. Only connect agents you trust, as with any MCP server.
 
-In the MCP dialog you can turn the server off, change the port, and set a token. With a token set, clients must send `Authorization: Bearer <token>`; the stdio bridge does that by itself. Set one to use a browser-based client such as the MCP Inspector.
+In the MCP dialog you can turn the server off, change the port, and replace the token. Replacing it disconnects clients until they use the new one.
 
 - Settings are stored in `mcp.json` in GSuite's config folder (`%AppData%\GSuite`, `~/Library/Application Support/GSuite`, `~/.config/GSuite`).
 - If the port is taken, the server tries the nine ports above it; the dialog shows the address it ended up on, and the stdio bridge finds it by itself.
@@ -157,5 +157,5 @@ A handler returns a string, any JSON value, or `mcp.result(...)` to include imag
 
 - GSuite has to be running, and its window visible while it starts (the editors initialise on the first animation frame). After that the window can be in the background.
 - Play mode moves a player and applies tile collisions and links; it does not run NPC scripts. `script_check` checks structure, not meaning.
-- `script_reference` (api.gscript.dev) needs an internet connection; the bundled guides and everything else work offline.
+- `script_reference` (api.gscript.dev) needs an internet connection; everything else works offline.
 - The Remote Control bridge needs Remote Control running on the same computer, as the same user, with MCP turned on in its options. It answers one request at a time, so while it waits for you to allow a change, other `rc_*` calls wait too.
