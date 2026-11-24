@@ -1,0 +1,2636 @@
+_(string)
+abs(float)
+adddnsentry(str, str)
+addgmap(str) - adds dynamicly a gmap to the options and loads it
+addguildmember(str, str, str)
+addstring(varname,string)
+addtiledef(str, str, int) - parameters: image,levelstart,type; specifys the tiles images for all levels that start with 'levelstart' (0-standard type, 1-new order)
+addtiledef2(str, str, int, int) - parameters: image,levelstart,x,y; replaces parts of the tiles image for all levels that start with 'levelstart'
+addweapon(str)
+aes_decrypt(str, str, str) - returns string - decrypts data, parameters are the AES key, init vector (16 bytes) and the data, which must have a length of multiple of 16
+aes_encrypt(str, str, str) - returns string - encrypts data, parameters are the AES key, init vector (16 bytes) and the data, which must have a length of multiple of 16 otherwise it will be filled with null bytes
+aindexof(float, obj) - returns integer
+allowedimageanimations - string - sets a list of images which will be animated, set to "all" to allow all animations
+allplayerscount - integer (read only)
+arccos(float) - returns float
+arcsin(float) - returns float
+arctan(float)
+array.add(object)
+array.clear()
+array.delete(index)
+array.index(object)
+array.indices(object)
+array.insert(index,object)
+array.remove(object)
+array.replace(index,object)
+array.size()
+array.subarray(index[,length])
+arraylen(array)
+attachplayertoobj(int, int)
+base64decode(str) - returns string - converts a url to base64 format by replacing - with + and _ with / and then decodes with base64 scheme
+base64decode(str) - returns string - decodes a string with base64 scheme
+base64encode(str) - returns string - encodes a string with base64 scheme
+base64encode(str) - returns string - encodes a string with base64 scheme and makes it compatible to be used in URL paths and parameters (replaces + with - and / with _)
+bintohex(str) - returns string - converts binary data to a hexadecimal string (double length)
+bodyexists(str) - returns boolean
+boxcontains(str, str) - returns boolean
+boxcontainsvector(str, str) - returns boolean
+boxintersect(str, str) - returns string
+boxoverlaps(str, str) - returns boolean
+boxscale(str, str) - returns string
+calljavascript(str, params...) - returns object - only for authorized servers
+callnpc(int, params...)
+callweapon(int, params...)
+canspin - boolean (read only)
+carriesblackstone - boolean (read only)
+carriesbush - boolean (read only)
+carriesnpc - boolean (read only)
+carriessign - boolean (read only)
+carriesstone - boolean (read only)
+carriesvase - boolean (read only)
+char(ascii)
+checksum(str) - returns float - calculates a checksum number on the specified string, this is also known as crc or crc32
+clearemptyglobalvars() - clears non-static empty global variables; this is mainly interesting on server-side
+compilescriptstream(str, str, int, bool) - returns string - compilation only on authorized servers
+contains(str, str) - returns boolean
+convertlatintoutf8(str) - returns string
+convertstringtotime(str, str) - returns float - converts a string to a time number (seconds since 1970) like the strptime unix function, doesn't work in windows, parameters are the format and time string, example: "%Y-%m-%d %H:%M:%S %Z", "2001-11-12 18:31:01 Etc/GMT"
+converttimetostring(float) - returns string - prints the timevar2 like 'Wed Apr  8 20:53:13 2009', see formatTimeString() for more options
+convertutf8tolatin(str) - returns string
+copylevel(str, str) - parameters are the source level filename and the destination filename; the destination is relative to the levels/ folder
+copystrings(str, str)
+cos(float)
+decompressfile(str, str, str, int) - returns boolean - parameters are filename, file name pattern (*), destination folder and flags (1 (keep zip paths) + 2 (keep original modification time)); unzips a file into the specified folder; on server-side the npcserver needs to have 'rw *' access on the destination folder otherwise it will extract files into scriptfiles/
+degtorad(float) - returns float
+deletefile(str) - returns boolean
+deletefolder(str) - returns boolean - deletes an empty folder, only works if the npcserver has write rights to folder/*, returns true if it was successful
+deletelevel(str) - returns boolean - deletes a level or other file, only works if the npcserver has write rights, returns true if it was successful
+deletestring(varname,index)
+des_decrypt(str, str) - returns string - decrypts data with DES algorithm, parameters are key and data
+des_encrypt(str, str) - returns string - encrypts data with DES algorithm, parameters are key and data
+detachplayer()
+disableweapons()
+echo(str)
+enableweapons()
+encryptpassword(str) - returns string
+encryptpassword2(str) - returns string
+escapefilename(str) - returns string
+escapestring(str) - returns string - adds \ in front of ", ' and \, and removes non-printable characters; made for mysql queries, same as string.escape()
+escapestring2(str) - returns string - replaces ' with '' and removes non-printable characters; made for sqlite queries
+escapestringkeepnewline(str) - returns string - adds \ in front of ", ' and \, and removes non-printable characters, but keeps new line characters
+eval(string)
+exp(float)
+extractfilebase(str) - returns string
+extractfileext(str) - returns string
+extractfilename(str) - returns string
+extractfilepath(str) - returns string
+fileexists(str) - returns boolean
+fileisfolder(str) - returns boolean
+filesize(str) - returns integer
+fileupdate(str) - returns boolean - requests the download or reloading of a file
+findfiles(str, int) - returns object - returns an array of found files, parameter are the pattern and flags (1=search recursive)
+findlevel(str) - returns object
+findnearestplayer(float, float) - returns object
+findnearestplayers(float, float) - returns object
+findnpc(str) - returns object
+findobject(str) - returns object - finds a global variable
+findpathinarray(obj, obj, obj, obj, obj, int, int, int) - returns object - simple pathfinding: parameters are a two-dimensional array ('tiles'), tiles were we are allowed to walk, tiles where we are not allowed to walk, tiles where we may stop, tiles where we should not stop, start x and y, maximum path length; the arrays for allowed/non-allowed tiles are only checked if they are not null
+findplayer(str) - returns object
+findplayer2(str) - returns object - same as findplayerbycommunityname(), finds players by account or community name
+findplayerbycommunityname(str) - returns object
+findplayerbyid(int) - returns object
+findplayersbyguild(str, str) - returns object - returns a list of player which match the provided guild name or allies list
+findweapon(str) - returns object
+findweaponnpc(str) - returns object - finds a weapon objects
+fiximagetransparency(str) - returns boolean - set's all pixels which match the upper left corner to transparent
+float(string)
+format(string,..)
+format2(str, obj) - returns string - like format(), except that this expects the format string and an array of variables instead of passing the variables as separate parameters
+formattimestring(str, float) - returns string - formats a string like the strftime unix function, parameters are the format and time
+freeallresources()
+freezeplayer2()
+generatescriptstream(str, str, bool) - returns string - compilation only on authorized servers
+generatezipstring(obj) - returns string - creates a zip in memory from the array you provide like {filename, content, filename, content, ...}, save to file using str.savestring(filename, 0)
+getactivelanguage() - returns string
+getangle(float,float)
+getascii(str) - returns integer
+getboxcenter(str) - returns string
+getcallstack() - returns object - returns an array of TCallStackEntry
+getcallstackinfo() - returns string - returns a string which lists the call stack like 'in myfunction() at line 11 by Caller.onCreated() at line 5'
+getdir(float,float)
+getextension(str) - returns string - same as extractFileExt()
+getfilemodtime(str) - returns integer - gets the file modifcation time (in unix time compatible to timevar2); accepts both exact file path and plain file name
+getgamesubversion() - returns string - distribution platform (amazon, googleplay etc.)
+getguildnick(str, str) - returns string
+gethttprequest(str, int, str) - returns object - finds an active http request with the given host, port and file
+gethttprequestforurl(str) - returns object - finds an active http request with the given url
+gethttprequests() - returns object
+getimgheight(str) - returns integer
+getimgwidth(str) - returns integer
+getlastwebdownloadtime() - returns float - the last time a file or a chunk of a file has been received from a web server
+getlastwebrequesttime() - returns float - the last time a file has been requested from a web server
+getlicenseexpirationtime() - returns float
+getmapx(str) - returns integer
+getmapy(str) - returns integer
+getmemorystatsobjects() - returns integer - returns the total memory taken by objects, beta
+getmemoryusage() - returns integer
+getnearestplayer(float, float) - returns integer
+getnearestplayers(float, float) - returns object
+getnpcserveruptime() - returns integer - deprecated, use getProcessUptime instead
+getplayerindex(str) - returns integer
+getprocesscpuusage() - returns float - CPU usage of the game/server (0-1) in the previous minute, multiply with 100 to get a percentage
+getprocessuptime() - returns integer - total number of seconds since the game/server started
+getscriptaccessfile(str, bool) - returns string
+getservername() - returns string
+getstring(varname)
+getstringkeys(str) - returns object
+getsupportedgraalversions() - returns string
+getutctime() - returns integer - get's the local time in seconds since 1970, is the same as int(timevar2) on server-side
+getwordfiltermatches(int) - returns object - returns an array of words which matched the word filter after calling wordFilterText(), parameter is the maximum number of matches you want
+getwordfiltermessage() - returns string - returns the warn message after calling wordFilterText()
+getwordfilternewtext() - returns string - returns the new text generated by the word filter after calling wordFilterText()
+graalversion - float (read only)
+gravity - float
+GuiControlProfile - object type, parent type is TGraalVar
+GuiControlProfile.align - string
+GuiControlProfile.autosizeheight - boolean
+GuiControlProfile.autosizewidth - boolean
+GuiControlProfile.backgroundinset - string
+GuiControlProfile.bitmap - string
+GuiControlProfile.border - integer
+GuiControlProfile.bordercolor - string
+GuiControlProfile.bordercolorhl - string
+GuiControlProfile.bordercolorna - string
+GuiControlProfile.borderthickness - integer
+GuiControlProfile.boxextent - string - the size of checkboxes, for GuiCheckBoxCtrl
+GuiControlProfile.cankeyfocus - boolean
+GuiControlProfile.cursorcolor - string
+GuiControlProfile.fillcolor - string
+GuiControlProfile.fillcolorhl - string
+GuiControlProfile.fillcolorna - string
+GuiControlProfile.fillonlynonchildarea - boolean - when opaque is true, then fill only the part of the control that is not covered by child controls
+GuiControlProfile.focusonshow - boolean
+GuiControlProfile.fontcolor - string
+GuiControlProfile.fontcolorhl - string
+GuiControlProfile.fontcolorlink - string
+GuiControlProfile.fontcolorlinkhl - string
+GuiControlProfile.fontcolorna - string
+GuiControlProfile.fontcolorsel - string
+GuiControlProfile.fontsize - integer
+GuiControlProfile.fontstyle - string
+GuiControlProfile.fontstylecontrolwords - string
+GuiControlProfile.fontstyleidentifiers - string
+GuiControlProfile.fontstylenumbers - string
+GuiControlProfile.fontstylestrings - string
+GuiControlProfile.fonttype - string
+GuiControlProfile.gettextheight() - returns integer - get the text height when displayed with the profile font
+GuiControlProfile.gettextwidth(str) - returns integer - get the width of text when displayed with the profile font
+GuiControlProfile.gradientcolor - string
+GuiControlProfile.justify - string - the same like "align"
+GuiControlProfile.linespacing - integer
+GuiControlProfile.modal - boolean
+GuiControlProfile.mouseoverselected - boolean
+GuiControlProfile.numbersonly - boolean - only allow entering of numbers into a GuiTextEditCtrl
+GuiControlProfile.opaque - boolean
+GuiControlProfile.overridestylefont - boolean - set to true of you want to replace the GUI style font attributes
+GuiControlProfile.preloadfont() - preloads the profile font and keeps it in memory until a script calls freeAllResources()
+GuiControlProfile.returntab - boolean
+GuiControlProfile.shadowcolor - string
+GuiControlProfile.shadowoffset - string
+GuiControlProfile.soundbuttondown - string
+GuiControlProfile.soundbuttonover - string
+GuiControlProfile.tab - boolean
+GuiControlProfile.textgradient - boolean
+GuiControlProfile.textoffset - string
+GuiControlProfile.textshadow - boolean
+GuiControlProfile.transparency - float
+hash_hmac(str, str, str) - returns string - calculates a hash, parameters are algorithm (e.g. sha256 or md5), data and key
+hasright(str, str) - returns boolean
+headexists(str) - returns boolean
+hextobin(str) - returns string - converts a hexadecimal string to binary (half length)
+hitobjects(float, float, float)
+inet_aton(str) - returns integer - converts an ip string to a 32-bit number
+inet_ntoa(int) - returns string - converts a 32-bit number to an ip string
+insertstring(varname,index,string)
+int(float)
+isipinranges(str, str, int) - returns boolean - parameters are the ip-range(s), the ip, and computer id (-1 to skip)
+isobject(str) - returns boolean
+isstringutf8(str) - returns boolean - checks if a text is in correct UTF8 format (unicode)
+jpegquality - integer
+levelexists(str) - returns boolean
+log(base,float)
+lowercase(str) - returns string
+makevar(string)
+matrixcreate(str, str) - returns string
+matrixcreatefromeuler(str) - returns string
+matrixmulpoint(str, str) - returns string
+matrixmultiply(str, str) - returns string
+matrixmulvector(str, str) - returns string
+max(a,b)
+md5(str) - returns string - calculates a md5 hash on the specified string
+min(a,b)
+movefile(str, str) - returns boolean - moves a file from source (first parameter) to destination (second parameter)
+MRandomGenerator - object type, parent type is TStaticVar, cannot be created by script
+MRandomGenerator.randfloat() - returns float - a random floating point number between 0 and 1
+MRandomGenerator.randint() - returns integer - a random integer number between 0 and 2147483647, use the modulus operator to generate a value in a smaller range (e.g. obj.randInt()%10 to get a value between 0 and 9)
+MRandomGenerator.seed - integer
+MRandomLCG - object type, parent type is MRandomGenerator
+MRandomR250 - object type, parent type is MRandomGenerator
+N_(string)
+object.link()
+object.type()
+onFileDownloaded(str, int) event - a game file has been downloded: filename, size
+onLevelFileUpdated(str) event - a file in the levels/ folder or sub-folder has been updated
+onLevelFileUpdated(str) event - a game file has been updated: filename
+onLoadedAccount() event - the account of a scripted TServerPlayer has been loaded
+onLoadedLevelNPCs(str) event - the putnpcs of a level have been loaded, parameter is the level name
+onLogMessage(str, float, float, float, str) event - log message: text, red, green, blue, log type
+onPlayerKilled(obj, obj) event - a player has been killed, parameters are the victim and killer
+onPlayerLanguageChanges(obj, str) event - the language of a player changed: player object and new language
+onPlayerNickChanges(obj) event - the provided player has a new nickname
+onPlayerShoots(obj, obj) event - a player shoot()s: player, projectile
+onServerListerConnect() event - the the server-lister (central server) restarted
+onSwitchObserverToPlayer(obj) event - a player has been switched from observer mode back to normal
+onSwitchPlayerToObserver(obj) event - a player has been switched to observer mode
+parsejson(obj, str) - parses a JSON string into a script variable, deprecated; use obj.loadJSONFromString(str) instead
+passwordmatches(str, str) - returns boolean
+pokereval(str, obj, obj, obj, int) - returns object - returns an array of chance to win a poker game, parameters are the poker type (holdem, holdem8, omaha, omaha8, 7stud, 7stud8, 7studnsq, razz, lowball27), an array of each players cards ({{"as","ah"},{"kd","kc"}}), the common cards, the dead cards and number of iterations
+preloadimage(str, bool) - forces loading of an image and, if the second parameter is true, keeps it in memory until a script calls freeAllResources()
+printf(string,..)
+radtodeg(float) - returns float
+random(start,end)
+randomstring(str) - returns string
+rc4_cipher(str, str) - returns string - encrypts or decrypts data, parameters are the RC4 key and the data
+removeescapesfromfilename(str) - returns string
+removeguild(str)
+removeguildmember(str, str)
+removestring(varname,string)
+removetiledefs(str) - parameter is the 'levelstart', removes all tile definitions for levels that start with 'levelstart'
+removeweapon(str)
+replacestring(varname,index,string)
+requestcurl(str) - returns object - requests data from a web server or similar, parameter is the URL; alternatively you can also create a TCURLRequest; works only if the server is authorized
+requesthttp(str, int, str) - returns object - parameters are host, port and file; on server works only if it's authorized
+requestsql(str, bool) - returns object - executes a sql query for the default database, parameters are the query string and if you expect a result (e.g. from a select-query); the result is an event object, call waitfor(requestobj,"onReceiveData",60) and then use requestobj.rows, error and lastinsertid
+requestsql2(str, str, bool) - returns object - like requestSQL(), but allows you to select the database, parameters are database identifier, query, expect result (true/false)
+requesturl(str) - returns object - requests the content of an URL, the returned object is firing a onReceiveData event; on server works only if it's authorized
+requesturlasgamefile(str, str, int, bool) - returns object - works similar to redirects in the folder configuration: you can use this function to download files from the web and treat them like files downloaded from the server; parameters are the url, the download filename, modification time (0 for current), and if the you want to force download (true/false), otherwise it will only download if the web server file changed
+resetimageanimation(str) - sets an image animation (gif or mng) back to the first frame
+resolvehost(str) - returns string - DNS lookup: resolves the host name (e.g. graalonline.com) to an ipv4 like 1.2.3.4
+rotationadd(str, str) - returns string
+rotationaddeuler(str, str) - returns string
+rotationfromeuler(str) - returns string
+rotationsub(str, str) - returns string
+rotationtoeuler(str) - returns string
+rsa_decrypt(str, str) - returns string - decrypts data, parameters are the private RSA key and the data
+rsa_encodesignature(str) - returns string - encodes a signature in DER format with SHA1 container (for verification)
+rsa_encrypt(str, str) - returns string - encrypts data, parameters are the public RSA key and the data
+rsa_generateprivatekey(int, int) - returns string - generates an RSA private key, parameters are key length (2048) and random exponent (65537 or so)
+rsa_getpublickey(str) - returns string - extracts the public part of a private RSA key
+rsa_sign(str, str) - returns string - generates a signature, parameters are the private RSA key and the data, the data usual is a hash of the actual data
+rsa_verify(str, str, str) - returns boolean - verififies a signature, parameters are the public RSA key, the data and the signature
+rungarbagecollector()
+savelevel(str) - forces the level to save immediately, can be used after updateboard2-tile modifications
+savelog(str)
+savelog2(str, str)
+say(int)
+say2(str)
+sendpm(str)
+sendrpgmessage(str)
+sendtonc(str)
+sendtorc(str)
+set(varname)
+setactivelanguage(str)
+setani(str, str)
+setarray(object,count)
+setbeltcolor(str)
+setcharprop(varname,string)
+setcoatcolor(str)
+setgender(str)
+sethead(str)
+setlevel2(str, float, float)
+setplayerprop(varname,string)
+setpm(str)
+setshield(str, int)
+setshoecolor(str)
+setshootparams(str)
+setskincolor(str)
+setsleevecolor(str)
+setstring(varname,string)
+setsword(str, int)
+sha1(str) - returns string - calculates a sha1 hash
+sha256(str) - returns string - calculates a sha256 hash on the specified string
+shieldexists(str) - returns boolean
+sin(float)
+sleep(time)
+sqlitedefragment(str) - returns boolean - defragments and reduces file size of an sqlite database, parameter is the host name (empty for main database), returns true if successful
+sqliteenablefilesynchronization(str, bool) - returns boolean - enables or disables file synchronization, update-operations are much faster without; parameters are host name and true/false, returns true if successful
+strcmp(str, str) - returns integer
+strequals(str, str) - returns boolean
+string.charat(pos)
+string.ends(text)
+string.escape()
+string.length()
+string.lower()
+string.pos(substring)
+string.positions(substring)
+string.starts(text)
+string.substring(index[,length])
+string.tokenize([delimiters])
+string.trim()
+string.upper()
+swordexists(str) - returns boolean
+TActionScriptVar - object type, parent type is TStaticVar
+TBilliardBall - object type, parent type is TGraalVar, cannot be created by script
+TBilliardBall.angle - float
+TBilliardBall.ballindex - integer (read only)
+TBilliardBall.colorindex - integer
+TBilliardBall.number - integer
+TBilliardBall.sidespin - float
+TBilliardBall.speed - float
+TBilliardBall.stripes - boolean
+TBilliardBall.topspin - float
+TBilliardBall.x - float
+TBilliardBall.y - float
+TBilliardBall.zangle - float
+TBilliardCalculation - object type, parent type is TStaticVar
+TBilliardCalculation.balldiameter - float
+TBilliardCalculation.balleasingborder - float
+TBilliardCalculation.balleasingmove - float
+TBilliardCalculation.ballpositions - string
+TBilliardCalculation.cornersize - float
+TBilliardCalculation.emulateshoot()
+TBilliardCalculation.enablepockets - boolean
+TBilliardCalculation.firstcontact - integer (read only)
+TBilliardCalculation.moves - string (read only)
+TBilliardCalculation.pocketballs - string (read only)
+TBilliardCalculation.shootcycles - integer (read only)
+TBilliardCalculation.sidespineasingball - float
+TBilliardCalculation.sidespineasingborder - float
+TBilliardCalculation.sidespineffectball - float
+TBilliardCalculation.sidespineffectborder - float
+TBilliardCalculation.sidespinthrow - float
+TBilliardCalculation.sidespintransfer - float
+TBilliardCalculation.tableborderbottom - float
+TBilliardCalculation.tableborderleft - float
+TBilliardCalculation.tableborderright - float
+TBilliardCalculation.tablebordertop - float
+TBilliardCalculation.targetangle - float
+TBilliardCalculation.targetball - integer
+TBilliardCalculation.targetsidespin - float
+TBilliardCalculation.targetspeed - float
+TBilliardCalculation.targettopspin - float
+TBilliardCalculation.topspineffectball - float
+TCallStackEntry - object type, parent type is TGraalVar, cannot be created by script
+TCallStackEntry.lastreturnline - integer (read only) - script line number where the last function call was returning from
+TCallStackEntry.lastreturnscript - string (read only) - name of the script we were calling
+TCallStackEntry.scriptcallobject - object (read only)
+TCallStackEntry.scriptline - integer (read only) - line of the where the script was when calling this
+TCallStackEntry.scriptname - string (read only) - name of the calling script
+TCURLRequest - object type, parent type is TStaticVar
+TCURLRequest.data - string (read only) - the data returned by the server
+TCURLRequest.headers - string - http headers as array of string
+TCURLRequest.onReceiveData() event - request finished, received data
+TCURLRequest.post - boolean - by default false, will send a POST instead of GET http request
+TCURLRequest.postdata - string - the POST data, set post=true to make this work
+TCURLRequest.quick - boolean - same as 'skipsslverification', default false
+TCURLRequest.returncode - integer (read only)
+TCURLRequest.sendrequest() - sends the request
+TCURLRequest.skipsslverification - boolean - by default false, speeds up connecting by skipping verification of SSL peer and host
+TCURLRequest.url - string - the request server URL
+TDoubleArrayVar - object type, parent type is TGraalVar, cannot be created by script
+TDrawingPanel - object type, parent type is TStaticVar
+TDrawingPanel.availablefilters - object (read only) - available filters for filterrectangle()
+TDrawingPanel.clearall()
+TDrawingPanel.clearrectangle(int, int, int, int) - x, y, width and height
+TDrawingPanel.drawcurve(int, int, int, int, int, int, float) - draws a curve with profile.fontcolor, parameters are x1,y1,x2,y2,x3,y3,linewidth (the curve goes close to x2,y2 but not through it)
+TDrawingPanel.drawimage(int, int, str) - x, y, source image
+TDrawingPanel.drawimagerectangle(int, int, str, int, int, int, int) - destination x and y, source image, source x,y,width and height
+TDrawingPanel.drawimagestretched(int, int, int, int, str, int, int, int, int) - destination x,y,width and height, source image, source x,y,width and height
+TDrawingPanel.drawline(int, int, int, int, float) - draws a line with profile.fontcolor, parameters are x1,y1,x2,y2,linewidth
+TDrawingPanel.drawobject(int, int, obj) - destination x and y, object to draw (e.g. player), on server-side only npc with images accepted right now
+TDrawingPanel.drawtext(int, int, str) - draws text with the current profile, parameters are x, y and the text to draw
+TDrawingPanel.filterrectangle(int, int, int, int, str) - returns boolean - applys a filter (x,y,width,height,filter type), possible filter types are gray, nightgoggle, negative, updown, blackwhite and lesscolors
+TDrawingPanel.height - integer (read only)
+TDrawingPanel.isclear - boolean (read only)
+TDrawingPanel.maskimage(int, int, str, str) - returns boolean - draws an image (x,y,filename) on top with a special mask operation (add or multiply), returns true if the operation was executed
+TDrawingPanel.parth - integer (read only)
+TDrawingPanel.partw - integer (read only)
+TDrawingPanel.partx - integer (read only)
+TDrawingPanel.party - integer (read only)
+TDrawingPanel.profile - object
+TDrawingPanel.saveimage(str) - saves the drawing panel under the specified filename
+TDrawingPanel.saveimage2(str, int) - saves the drawing panel under the specified filename, second parameter is the bitdepth (24 or 32)
+TDrawingPanel.saveimagetostring(str) - returns string - returns the raw image data, parameter is a filename to specify the image type (.png, .jpg, .bmp)
+TDrawingPanel.saveimagetostring2(str, int) - returns string - returns the raw image data, parameter is a filename to specify the image type (.png, .jpg, .bmp), second parameter is the bitdepth (24 or 32)
+TDrawingPanel.setdrawpalette(str, int) - sets a palette to use for later drawing operations, parameters are {color0,color1,...} and the index of the transparent color
+TDrawingPanel.setsize(int, int)
+TDrawingPanel.useownprofile - boolean
+TDrawingPanel.width - integer (read only)
+TGaniObject - object type, parent type is TGraalVar, cannot be created by script
+TGaniObject.ani - string (read only)
+TGaniObject.aniparams - string (read only)
+TGaniObject.attr - object (read only)
+TGaniObject.colors - object (read only)
+TGraalSocket - object type, parent type is TSocket, cannot be created by script
+TGraalSocket.onReceiveGraalData(int, str) event - received a graal data package: parameters are type and data
+TGraalSocket.senddata(int, str) - send a graal package: type and data string
+TGraalVar - object type, cannot be created by script
+TGraalVar.addarray(obj) - adds another array to this variable
+TGraalVar.addarraymember(str) - returns object - adds an array member with a name and returns the new array member
+TGraalVar.addnamedstring(str, str) - returns object
+TGraalVar.cancelevents(str) - removes all previously scheduled events (scheduleevent) of the specified event name
+TGraalVar.catchevent(str, str, str) - adds an event handler for the specified object and event, third parameter is the function which receives the event (first parameter of the event will be the object for which the event occured)
+TGraalVar.clearemptyvars() - removes empty subvariables from memory
+TGraalVar.clearvars() - clears all dynamic variables
+TGraalVar.copyfrom(obj) - copies all variables and array values from another object, doesn't work for protected variables like players though
+TGraalVar.getarraymember(str) - returns object - searches for an array member by name
+TGraalVar.getdynamicvarnames() - returns object - gets the names of all dynamic (not built-in) subvariables of this object
+TGraalVar.geteditvarnames() - returns object - gets the names of all dynamic variables which can be modified
+TGraalVar.getfunctions() - returns object - gets the names of all functions of the object as array, also each entry has subvariables which give more information about the function ("parameters", "description", "scope")
+TGraalVar.getstaticvarnames() - returns object - gets the names of all static (built-in) subvariables of this object
+TGraalVar.getvarnames() - returns object - gets the names of all subvariables of this object
+TGraalVar.hasfunction(str) - returns boolean - checks if the object has a function of the specified name (also checks if it can be called by the current script object)
+TGraalVar.ignoreevent(str, str) - lets the object ignore an event (second parameter) of the specified object name
+TGraalVar.ignoreevents(str) - lets the object ignore all previously catched events of the specified object name
+TGraalVar.initialized - boolean (read only)
+TGraalVar.insertarray(int, obj) - inserts an array at the specified index
+TGraalVar.isinclass(str) - returns boolean - checks if the object has joined the specified class
+TGraalVar.ispaused - boolean - suspends the script if set to paused
+TGraalVar.join(str) - lets the object join a class and inherit all functions and event handlers of that class
+TGraalVar.joinedclasses - object
+TGraalVar.leave(str) - leaves a previously joined class
+TGraalVar.loadfolder(str, int) - loads the content of a folder into the variable, you must specify the folder name and pattern (e.g. "levels/bodies/*.png") and if it should be recursive
+TGraalVar.loadini(str) - loads an .ini file into the variable, you can access variables by obj.inisection.varname
+TGraalVar.loadjson(str) - loads an file with json formated data into the variable
+TGraalVar.loadjsonfromstring(str) - loads a json formated string into the variable
+TGraalVar.loadlines(str) - loads a file and adds it line by line to the variable (as array)
+TGraalVar.loadstring(str) - loads the content of a file into the variable
+TGraalVar.loadvars(str) - loads the variables from a file where each line has the format varname=value
+TGraalVar.loadvarsfromarray(obj) - loads the variables from a string list of the format varname=value
+TGraalVar.loadxml(str) - loads an .xml file into the variable (array members with names and text attribute)
+TGraalVar.loadxmlfromstring(str) - loads an xml formated string into the variable (array members with names and text attribute)
+TGraalVar.maxlooplimit - integer - sets the maxmimum number of loop iterations, default 10000; the allowed range for this can vary from server to server
+TGraalVar.name - string
+TGraalVar.objecttype() - returns string - returns the object type, which can be TGraalVar, TProjectile etc.
+TGraalVar.savejson(str, int, int) - saves the variable in json format to a file, the second parameter is the save mode (0 - overwrite, 1 - append),  third parameter is the format flags (0 - normal, 1 - beautify: add newlines and indents)
+TGraalVar.savejsontostring(int) - returns string - saves the variable to a json formated string,  parameter is the format flags (0 - normal, +1 - beautify: add newlines and indents, +2 - force strings with comma as array)
+TGraalVar.savelines(str, int) - saves the array line by line into a file, the second parameter is the save mode (0 - overwrite, 1 - append)
+TGraalVar.savestring(str, int) - saves the value as string into a file, the second parameter is the save mode (0 - overwrite, 1 - append)
+TGraalVar.savevars(str, int) - saves the subvars in the format varname=value into a file, the second parameter is the save mode (0 - overwrite, 1 - append)
+TGraalVar.savevarstoarray(bool) - returns object - saves the subvars in the format varname=value into an array, you must specify if it should be sorted
+TGraalVar.savexml(str, int) - saves the variable (array members with names) in xml format to a file, the second parameter is the save mode (0 - overwrite, 1 - append)
+TGraalVar.savexmltostring() - returns string - saves the variable (array members with names) to an xml formated string
+TGraalVar.scheduleevent(float, str, params...) - returns object - invokes an event (onEventname) after the specified delay (in seconds), second parameter is the event name, followed by the parameters
+TGraalVar.scripterrors - object (read only) - gives the list of script errors which were reported for this object
+TGraalVar.scriptlogmissingfunctions - boolean
+TGraalVar.settimer(float) - invokes an onTimeout event after the specified time, similar to 'timeout=value'
+TGraalVar.sortascending() - sorts the array in ascending order (smallest value first)
+TGraalVar.sortbyvalue(str, str, bool) - sorts an array, specify the variable of the array members which is compared, also the variable type and if it should be sorted ascending; variable type can be "string", otherwise it is sorted by floating point value
+TGraalVar.sortdescending() - sorts the array in descending order (highest value first)
+TGraalVar.subarray2(int, int, int, int) - returns object - extracts a two-dimensional array, specify startpos1, length1, startpos2, length2
+TGraalVar.timeout - float
+TGraalVar.timershow() - lets an npc show the current timeout variable, deprecated
+TGraalVar.trigger(str, params...) - invokes an event on the object (onEventname) with the specified event name and parameters, doesn't interrupt the current script
+THTTPRequest - object type, parent type is TGraalVar, cannot be created by script
+THTTPRequest.address - string (read only)
+THTTPRequest.allowredirectext - boolean - if using requestURLAsGameFile and the file is redirected, allow it to use the redirected file extension (enabled by default)
+THTTPRequest.contentlanguage - string (read only)
+THTTPRequest.contentlength - integer (read only)
+THTTPRequest.contenttype - string (read only)
+THTTPRequest.downloadcomplete - boolean (read only)
+THTTPRequest.file - string (read only)
+THTTPRequest.fulldata - string (read only)
+THTTPRequest.gamefile - string (read only) - the data will be saved as gamefile under this filename
+THTTPRequest.lastdatatime - float (read only) - time when data has been received by the HTTP server
+THTTPRequest.lastmodified - string (read only)
+THTTPRequest.location - string (read only) - the redirection location
+THTTPRequest.onReceiveData() event - request finished, received data
+THTTPRequest.port - integer (read only)
+THTTPRequest.returncode - integer (read only)
+THTTPRequest.returnmessage - string (read only)
+THTTPRequest.server - string (read only)
+THTTPRequest.url - string (read only)
+THTTPServer - object type, parent type is TStaticVar
+THTTPServer.directorylisting - boolean - enables display of directories, by default false
+THTTPServer.extensionrewrite - boolean - enables rewrite of some extensions to make it possible to use CDNs for caching, by default true
+THTTPServer.filepath - string - specifies the folder from where the files should be served
+THTTPServer.ports - string - the port(s) where the http server should serve on, it's also possible to specify which internal ip to bind to (ip:port)
+THTTPServer.setdisallowedpaths(str) - disallow access to some paths, provided as string array, redirects them to /error.html
+THTTPServer.setdownloadkey(str) - sets the encryption key for file requests with the new file download system in Graal 6.2
+THTTPServer.start() - starts the http service, you must specify the ports and filepath first
+THTTPServer.stop() - stops the http service
+timevar - integer (read only)
+timevar2 - float (read only)
+touchfile(str) - returns boolean - updates the modification time of a file to the current time
+TProjectile - object type, parent type is TGraalVar, cannot be created by script
+TProjectile.angle - float (read only)
+TProjectile.destroy()
+TProjectile.fromplayer - object
+TProjectile.horiz - boolean (read only)
+TProjectile.params - string
+TProjectile.speed - float (read only)
+TProjectile.x - float (read only)
+TProjectile.y - float (read only)
+TProjectile.z - float (read only)
+TProjectile.zspeed - float (read only)
+trace(str) - same as echo()
+triggerclient(str, str, str)
+TScriptFunction - object type, parent type is TGraalVar, cannot be created by script
+TScriptUniverse - object type, cannot be created by script
+TServerLevel - object type, parent type is TGraalVar, cannot be created by script
+TServerLevel.board - object (read only)
+TServerLevel.dontswapoutlevel()
+TServerLevel.findareanpcs(float, float, float, float) - returns object - returns an array of all NPCs in the specified rectangle (x,y,width,height)
+TServerLevel.findareaplayers(float, float, float, float) - returns object - returns an array of all players in the specified rectangle (x,y,width,height), uses the blocking rectangle of players (0.5,1,2,2) instead of (0,0)
+TServerLevel.getareanpcs(float, float, float, float) - returns object
+TServerLevel.getmappartfile(float, float) - returns string
+TServerLevel.getnpcindex(str) - returns integer
+TServerLevel.getz(float, float) - returns float
+TServerLevel.height - integer (read only)
+TServerLevel.hitobjects(float, float, float)
+TServerLevel.isjail - boolean (read only) - defined in server option jaillevels
+TServerLevel.isnopkzone - boolean
+TServerLevel.issingleplayer - boolean (read only) - defined in server option singleplayerlevels
+TServerLevel.issparringzone - boolean (read only)
+TServerLevel.noplayerkilling()
+TServerLevel.onwall(float, float) - returns boolean
+TServerLevel.onwall2(float, float, float, float) - returns boolean
+TServerLevel.onwallpath(float, float, float, float, float, float) - returns boolean
+TServerLevel.onwater(float, float) - returns boolean
+TServerLevel.onwater2(float, float, float, float) - returns boolean
+TServerLevel.onwaterpath(float, float, float, float, float, float) - returns boolean
+TServerLevel.putbomb(int, float, float) - adds a classic bomb with the specified power, x and y
+TServerLevel.putbomb2(int, float, float, str) - adds a classic bomb with the specified power, x, y and image (default bomb1.png)
+TServerLevel.putexplosion(int, float, float)
+TServerLevel.putexplosion2(int, int, float, float)
+TServerLevel.putnpc2(float, float, str) - returns object
+TServerLevel.save(float, float)
+TServerLevel.shoot(float, float, float, float, float, float, str, str)
+TServerLevel.testnpc(float, float) - returns integer
+TServerLevel.testplayer(float, float) - returns integer
+TServerLevel.tilelayercount - integer
+TServerLevel.tilelayers - object (read only)
+TServerLevel.tilemap - object (read only) - the tile map when using new level format
+TServerLevel.tiletype(float, float) - returns integer
+TServerLevel.triggeraction(float, float, str, str)
+TServerLevel.updateboard(int, int, int, int)
+TServerLevel.updateboard2(int, int, int, int)
+TServerLevel.width - integer (read only)
+TServerNPC - object type, parent type is TGaniObject, cannot be created by script
+TServerNPC.ani - string
+TServerNPC.aniparams - string
+TServerNPC.ap - integer
+TServerNPC.arrows - integer
+TServerNPC.blockagain()
+TServerNPC.body - string
+TServerNPC.bodyimg - string
+TServerNPC.bombs - integer
+TServerNPC.canbecarried()
+TServerNPC.canbepulled()
+TServerNPC.canbepushed()
+TServerNPC.cannotbecarried()
+TServerNPC.cannotbepulled()
+TServerNPC.cannotbepushed()
+TServerNPC.cannotwarp()
+TServerNPC.canwarp()
+TServerNPC.canwarp2()
+TServerNPC.changeimgcolors(int, float, float, float, float)
+TServerNPC.changeimgmode(int, int)
+TServerNPC.changeimgpart(int, int, int, int, int)
+TServerNPC.changeimgvis(int, int)
+TServerNPC.changeimgzoom(int, float)
+TServerNPC.chat - string
+TServerNPC.darts - integer
+TServerNPC.destroy()
+TServerNPC.dir - integer
+TServerNPC.dontblock()
+TServerNPC.dontsave - boolean
+TServerNPC.drawaslight()
+TServerNPC.drawoverplayer()
+TServerNPC.drawunderplayer()
+TServerNPC.findimg(int) - returns object
+TServerNPC.glovepower - integer
+TServerNPC.gralats - integer
+TServerNPC.head - string
+TServerNPC.headimg - string
+TServerNPC.hearts - float
+TServerNPC.height - float (read only)
+TServerNPC.hide()
+TServerNPC.hideimg(int)
+TServerNPC.hideimgs(int, int)
+TServerNPC.hidetoclients - boolean
+TServerNPC.horseimg - string
+TServerNPC.hurtdx - float
+TServerNPC.hurtdy - float
+TServerNPC.hurtpower - float (read only)
+TServerNPC.id - integer (read only)
+TServerNPC.image - string
+TServerNPC.isblocking - boolean
+TServerNPC.isblockingprojectiles - boolean
+TServerNPC.level - object (read only)
+TServerNPC.message(str)
+TServerNPC.move(float, float, float, int) - moves the npc smoothly, parameters are delta x, delta y, time and options:  cache type (0, 1-cache, 2-append) + blockcheck(4) + eventwhendone(8) + applydir(16)
+TServerNPC.name - string (read only)
+TServerNPC.nick - string
+TServerNPC.noplayeronwall()
+TServerNPC.npcsindex - integer (read only)
+TServerNPC.onwall(float, float) - returns boolean - checks if the specified position (x, y) is blocking
+TServerNPC.onwall2(float, float, float, float) - returns boolean - checks if the specified rectangle (x, y, width and height in tiles) is blocking
+TServerNPC.onwallpath(float, float, float, float, float, float) - returns boolean - checks if a path is blocking (x, y, width, height, delta x, delta y)
+TServerNPC.playeronwall()
+TServerNPC.requesttext(str, str)
+TServerNPC.rupees - integer
+TServerNPC.save - object (read only)
+TServerNPC.savelocally - boolean - for putnpcs: say if the npc should be saved into a subfolder and be removed from memory when there is no player in the level
+TServerNPC.scriptdone()
+TServerNPC.sendtext(str, str, params...)
+TServerNPC.setcharani(str, str)
+TServerNPC.setchargender(str)
+TServerNPC.setcoloreffect(float, float, float, float) - sets red, green, blue and alpha value of the NPC (values between 0 and 1), this must be called on client-side
+TServerNPC.seteffectmode(int) - sets the object drawing mode (0 - add, 1 - transparent, 2 - subtract, 3 - daynight), this must be called on client-side
+TServerNPC.setimg(str)
+TServerNPC.setimgpart(str, int, int, int, int)
+TServerNPC.setshape(int, int, int) - enables rectangular blocking behaviour for the NPC. Parameters are shape type (right now only 1 for rectangular is supported), and the width and height in pixels; you have to set it on both server-side and client-side to make it blocking on both server and client
+TServerNPC.setshape2(int, int, obj) - enables tile-based blocking behaviour. Parameters are tile width, height and an array of tile types; you have to set it on both server-side and client-side to make it blocking on both server and client
+TServerNPC.setzoomeffect(float) - zooms (if parameter is greater than 1) or shrinks the NPC, this must be called on client-side
+TServerNPC.shield - string
+TServerNPC.shieldimg - string
+TServerNPC.shieldpower - integer
+TServerNPC.show()
+TServerNPC.showani(int, float, float, int, str) - returns object
+TServerNPC.showani2(int, float, float, float, int, str) - returns object
+TServerNPC.showcharacter()
+TServerNPC.showimg(int, str, float, float) - returns object
+TServerNPC.showimg2(int, str, float, float, float) - returns object
+TServerNPC.showtext(int, float, float, str, str, str) - returns object
+TServerNPC.showtext2(int, float, float, float, str, str, str) - returns object
+TServerNPC.sprite - integer
+TServerNPC.sword - string
+TServerNPC.swordimg - string
+TServerNPC.swordpower - integer
+TServerNPC.visible - boolean
+TServerNPC.warpto(str, float, float)
+TServerNPC.width - float (read only)
+TServerPlayer - object type, parent type is TGaniObject
+TServerPlayer.account - string (read only)
+TServerPlayer.addweapon(str)
+TServerPlayer.adminlevel - integer (read only)
+TServerPlayer.adminworlds - string (read only)
+TServerPlayer.ani - string
+TServerPlayer.aniparams - string
+TServerPlayer.ap - integer
+TServerPlayer.arrows - integer
+TServerPlayer.attached - boolean (read only)
+TServerPlayer.attachid - integer (read only)
+TServerPlayer.attachplayertoobj(int, int)
+TServerPlayer.attachtype - integer (read only)
+TServerPlayer.body - string
+TServerPlayer.bodyimg - string
+TServerPlayer.bombs - integer
+TServerPlayer.callweapon(int, params...) - deprecated, calls a weapon script by index, with specified event and parameters
+TServerPlayer.canspin - boolean
+TServerPlayer.carriesblackstone - boolean (read only)
+TServerPlayer.carriesbush - boolean (read only)
+TServerPlayer.carriesnpc - boolean (read only)
+TServerPlayer.carriessign - boolean (read only)
+TServerPlayer.carriesstone - boolean (read only)
+TServerPlayer.carriesvase - boolean (read only)
+TServerPlayer.chat - string
+TServerPlayer.communityname - string (read only)
+TServerPlayer.computerfirstlogin - integer (read only)
+TServerPlayer.computerid - integer (read only) - only accessible on authorized servers
+TServerPlayer.darts - integer
+TServerPlayer.deaths - integer
+TServerPlayer.destroy() - deletes the player, only works for players created by script
+TServerPlayer.detachplayer()
+TServerPlayer.dir - integer
+TServerPlayer.disableweapons()
+TServerPlayer.enableweapons()
+TServerPlayer.findweapon(str) - returns object
+TServerPlayer.freezeplayer2()
+TServerPlayer.fullhearts - integer
+TServerPlayer.getpersonaluploadfolder() - returns string - returns the folder where uploads are stored (requesttext("folder","PERSONAL"), uploadfile(filename))
+TServerPlayer.glovepower - integer
+TServerPlayer.graalversion - float (read only)
+TServerPlayer.gralats - integer
+TServerPlayer.guild - string
+TServerPlayer.hasright(str, str) - returns boolean - parameters are the rights (e.g. "rw") and the filename
+TServerPlayer.hasrightflag(str) - returns boolean - the flag can be one of the following: warptoxy,warptoplayer,warpplayers,updatelevel,disconnectplayers,viewattributes,setattributes,setownattributes,resetattributes,adminmessage,changerights,banplayers,changecomments,invisible,changestaffaccounts,setserverflags,changeoptions,changefolderconfig,changefolderrights,NPC-Control
+TServerPlayer.head - string
+TServerPlayer.headimg - string
+TServerPlayer.headset - integer
+TServerPlayer.hearts - float
+TServerPlayer.horseimg - string
+TServerPlayer.hp - float
+TServerPlayer.id - integer (read only)
+TServerPlayer.ipaddress - string (read only) - only accessible on authorized servers
+TServerPlayer.ipaddresshash - string (read only) - an identifier based on the ip-address of the player
+TServerPlayer.isadmin - boolean (read only)
+TServerPlayer.isfemale - boolean
+TServerPlayer.ishidden - boolean
+TServerPlayer.ismale - boolean
+TServerPlayer.isobserver - boolean
+TServerPlayer.kills - integer
+TServerPlayer.language - string - language is writable, but will not change the clientside language
+TServerPlayer.languagedomain - string - language domain is 'en', 'de', 'fr' etc., it is writable but will not change the clientside languagedomain
+TServerPlayer.lastdead - integer (read only) - time of the last classic death, compatible to 'timevar'
+TServerPlayer.level - object (read only)
+TServerPlayer.levelname - string - the name of the level the level is currently in, also works for offline players; writing the levelname is only possible for offline players
+TServerPlayer.loadaccount() - loads the player, only works for players created by script; this function is called automatically when creating a player
+TServerPlayer.logintime - integer (read only) - login time of the player, compatible to 'timevar'
+TServerPlayer.maxhp - integer
+TServerPlayer.movementlimit - float
+TServerPlayer.mp - integer
+TServerPlayer.nick - string
+TServerPlayer.onBodyChanges(str, str) event - body changes: new and old body filename
+TServerPlayer.onHeadChanges(str, str) event - head changes: new and old head filename
+TServerPlayer.onlinetime - integer - total time the player has played on the server, in seconds
+TServerPlayer.onNickChanges(str, str) event - nick changes: new and old nick name
+TServerPlayer.onSwordChanges(str, str) event - sword changes: new and old sword filename
+TServerPlayer.pause - boolean
+TServerPlayer.paused - boolean
+TServerPlayer.platform - string (read only)
+TServerPlayer.playersindex - integer (read only) - position of the player in the level.players[] array
+TServerPlayer.rating - float
+TServerPlayer.ratingd - float
+TServerPlayer.removeweapon(str)
+TServerPlayer.rupees - integer
+TServerPlayer.saveaccount() - saves the player, only works for players created by script
+TServerPlayer.say(int)
+TServerPlayer.say2(str)
+TServerPlayer.sendping() - returns object - pings the player, returns a request object which will get an onReceivePing(time) event (use catchevent() on the object)
+TServerPlayer.sendpm(str)
+TServerPlayer.sendrpgmessage(str) - sends a message to the log window (F2) of the player
+TServerPlayer.sendtoirc(str, str) - sends an irc message to the player/RC, parameters are command and parameters, possible commands are join (channel), part (channel), topic (channel,topic), privmsg (source,channel,message), notice (source,channel,message)
+TServerPlayer.sendtorc(str) - sends a message to the RC chat window which is only visible to this player
+TServerPlayer.setani(str, str)
+TServerPlayer.setbeltcolor(str)
+TServerPlayer.setcoatcolor(str)
+TServerPlayer.setgender(str)
+TServerPlayer.sethead(str)
+TServerPlayer.setlevel2(str, float, float)
+TServerPlayer.setshield(str, int)
+TServerPlayer.setshoecolor(str)
+TServerPlayer.setskincolor(str)
+TServerPlayer.setsleevecolor(str)
+TServerPlayer.setsword(str, int)
+TServerPlayer.shield - string
+TServerPlayer.shieldimg - string
+TServerPlayer.shieldpower - integer
+TServerPlayer.sprite - integer
+TServerPlayer.sword - string
+TServerPlayer.swordimg - string
+TServerPlayer.swordpower - integer
+TServerPlayer.trial - boolean (read only) - the player is in trial or guest mode
+TServerPlayer.triggerclient(str, str, str)
+TServerPlayer.unfreezeplayer()
+TServerPlayer.upgradestatus - string (read only)
+TServerPlayer.version - float (read only)
+TServerPlayer.weapons - object (read only)
+TServerSign - object type, parent type is TGraalVar, cannot be created by script
+TServerSign.text - string
+TServerSign.x - integer
+TServerSign.y - integer
+TSocket - object type, parent type is TStaticVar
+TSocket.address - string (read only) - the server address this socket connected to
+TSocket.bind(int, bool) - binds the given port, second parameter says if it should be udp; when a client connects an onNewClient(newsocket) event will be invoked
+TSocket.close() - closes the socket, which means it will be disconnected or not longer bound
+TSocket.connect(str, int) - connects to the specified host and port, once the connection is established an onConnect event will be invoked and you receive onReceiveData(string) events when the other side of the connection sends data; if the connection fails then an onConnectFailed event will be invoked
+TSocket.data - string - incoming data, if you are not using packagedelimiter then you must parse the incoming data yourself and clear it once you don't need it anymore
+TSocket.enablessl - boolean - enables SSL on the connection, enable this before calling connect()
+TSocket.error - string (read only) - gives the error string if there was a problem
+TSocket.ipaddress - string (read only) - gives the ipv4-address as string
+TSocket.isconnected - boolean (read only) - says if the socket is currently connected or bound
+TSocket.onBind() event - the bind() call was successful
+TSocket.onBindFailed() event - the bind() call failed, wrong port or missing rights
+TSocket.onClose() event - the socket connect has been closed
+TSocket.onConnect() event - connect() succeeded
+TSocket.onConnectFailed() event - connect() failed
+TSocket.onNewClient(obj) event - a new client connected to the bound socket
+TSocket.onReceiveData(str) event - received (TCP) data
+TSocket.onReceiveDataPackage(str) event - received a data package (when using packagedelimiter)
+TSocket.onReceiveUDPData(str, str, int) event - received UDP data: data, sender ip and port
+TSocket.outdatalength - integer (read only) - how much data is not transferred to the other side yet
+TSocket.packagedelimiter - string - if a delimiter is specified then the engine will automatically split the incoming data into packages and invoke onReceiveDataPackage(string); note that setting this delimiter will immediately invoke onReceiveDataPackage events, so do this after joining the classes which contain the event handler functions
+TSocket.parent - object (read only) - the server socket this client is belonging to (in parent.clients)
+TSocket.port - integer (read only) - the port this socket is bound or connected to
+TSocket.send(str) - sends data to the other side of the connection
+TSocket.sendudp(str, str, int) - sends data to the specified host and port, the host must be an ip address
+TSocket.sslcertfile - string - the ssl certificate, can only be used in combination with enablessl=true and a sslkeyfile
+TSocket.sslcipherlist - string - sets the SSL encryption and integrity check (e.g. AES-128-MD5)
+TSocket.sslkeyfile - string - the ssl key, can only be used in combination with enablessl=true and a sslcertfile
+TSocket.sslprotocol - string - sets the SSL protocol (SSLv3, TLSv1 etc.), but normally not needed
+TSocket.sslverifycert - string - sets the SSL verification certificate or certificate chain (buffer not file)
+TSocket.usegraalsockets - boolean - bind clients using the graal protocol, only on authorized servers
+TSQLRequest - object type, parent type is TStaticVar, cannot be created by script
+TSQLRequest.completed - boolean (read only)
+TSQLRequest.error - string (read only)
+TSQLRequest.lastinsertid - integer (read only)
+TSQLRequest.onReceiveData() event - request finished, received sql data in rows[]
+TStaticVar - object type, parent type is TGraalVar
+TStaticVar.destroy()
+TTileAnimation - object type, parent type is TGraalVar, cannot be created by script
+TTileAnimation.animationcycle - boolean
+TTileAnimation.animationframes - string
+TTileAnimation.animationtime - float
+TTileAnimation.dir - string
+TTileAnimation.imagemap - string
+TTileAnimation.randomstart - boolean
+TTileAnimation.startframe - integer
+TTileImageMap - object type, parent type is TGraalVar, cannot be created by script
+TTileImageMap.allowunload - boolean
+TTileImageMap.cellcountx - integer
+TTileImageMap.cellcounty - integer
+TTileImageMap.cellheight - integer
+TTileImageMap.celloffsetx - integer
+TTileImageMap.celloffsety - integer
+TTileImageMap.cellroworder - integer
+TTileImageMap.cellstridex - integer
+TTileImageMap.cellstridey - integer
+TTileImageMap.cellwidth - integer
+TTileImageMap.filtermode - string
+TTileImageMap.filterpad - boolean
+TTileImageMap.framecount - integer
+TTileImageMap.imagemode - string
+TTileImageMap.imagename - string
+TTileImageMap.linkimagemaps - string
+TTileImageMap.preferperf - boolean
+TTileImageMap.preload - boolean
+TTileLayer - object type, parent type is TTileMapObject, cannot be created by script
+TTileLayer.gettileanimation(int, int) - returns string
+TTileLayer.gettileflags(int, int) - returns string
+TTileLayer.gettileframe(int, int) - returns integer
+TTileLayer.gettileimagemap(int, int) - returns string
+TTileLayer.layerfile - string
+TTileLayer.tilecountx - integer
+TTileLayer.tilecounty - integer
+TTileLayer.tilesizex - float
+TTileLayer.tilesizey - float
+TTileMap - object type, parent type is TGraalVar
+TTileMap.clear() - clears the tile map, only works for script-created tile maps
+TTileMap.destroy() - deletes the tile map, only works for script-created tile maps
+TTileMap.findanimation(str) - returns object
+TTileMap.findimagemap(str) - returns object
+TTileMap.loadtilemap(str, str) - returns object - use loadTileMapXML instead
+TTileMap.loadtilemapxml(str) - returns object - loads a level in the new format (gxml); this is for data processing only, if you want to display it then use GuiTilesCtrl or create a gmap with the line TILEMAP yourmap.gxml
+TTileMap.reload()
+TTileMap.saveasimage(str, int, bool) - generates a screenshot of the whole map, parameters are the file name, number of pixels per unit and if it should clip to visible objects
+TTileMapLayer - object type, parent type is TGraalVar, cannot be created by script
+TTileMapLayer.sortmode - string - defines how objects are sorted in this layer,  can be "Normal" or "Y Axis"
+TTileMapObject - object type, parent type is TGraalVar, cannot be created by script
+TTileMapObject.collisionactivereceive - boolean
+TTileMapObject.collisionpolylist - string
+TTileMapObject.flipx - boolean
+TTileMapObject.flipy - boolean
+TTileMapObject.layer - integer
+TTileMapObject.position - string
+TTileMapObject.rotation - float
+TTileMapObject.size - string
+TTileMapObject.sortpoint - string
+TTilesLayer - object type, parent type is TGraalVar, cannot be created by script
+TTilesLayer.layerindex - integer (read only)
+TTilesLayer.updateboard(int, int, int, int)
+TTilesLayer.updateboard2(int, int, int, int)
+TTileSprite - object type, parent type is TTileMapObject, cannot be created by script
+TTileSprite.animationname - string
+TTileSprite.frame - integer
+TTileSprite.imagemap - string
+unfreezeplayer()
+unset(varname)
+updateratingdeviation(float, float) - returns float - old deviation, time of last spar, returns new deviation
+updateratings(obj) - returns object - updates an array of {rating1,ratingdeviation1, rating2,ratingdeviation2, ...}, init them at 1500 and 350
+uppercase(str) - returns string
+urldecode(str) - returns string - decode a parameter of a http request (?param)
+urlencode(str) - returns string - encode a parameter for use in http urls (?param)
+vectoradd(str, str) - returns string
+vectorcross(str, str) - returns string
+vectordist(str, str) - returns float
+vectordot(str, str) - returns float
+vectorlen(str) - returns float
+vectornormalize(str) - returns string
+vectororthobasis(str) - returns string
+vectorscale(str, float) - returns string
+vectorsub(str, str) - returns string
+vecx(dir)
+vecy(dir)
+waitfor(object,event[,timeout])
+wordfiltertext(str, str) - returns integer - filters text with the rules defined in wordfilter/rules.txt, second parameter is the text type (chat, pm, toall or nick), result is a combination of 1 (log) + 2 (tell admins) + 4 (replace) + 8 (warn) + 16 (jail) + 32 (ban); use getWordFilterNewText(), getWordFilterMessage() and getWordFilterMatches() for more information about the filtered text
+Clientside:
+$pref::audio::midivolume - integer
+$pref::audio::mp3volume - integer
+$pref::audio::radiovolume - integer
+$pref::audio::reversestereo - boolean
+$pref::audio::sfxvolume - integer
+$pref::capture::allowbyscript - boolean (read only)
+$pref::capture::area - string
+$pref::capture::audiobitrate - integer
+$pref::capture::disabledaynight - boolean
+$pref::capture::format - string
+$pref::capture::fps - integer
+$pref::capture::hideinterface - boolean
+$pref::capture::recordaudio - boolean
+$pref::capture::showmouse - boolean
+$pref::capture::size - string
+$pref::capture::videobitrate - integer
+$pref::graal::allowglobalpms - boolean
+$pref::graal::automapping - boolean
+$pref::graal::cachefilenames - boolean
+$pref::graal::defaultfontname - string
+$pref::graal::defaultfontsize - integer
+$pref::graal::displaytrayicon - boolean
+$pref::graal::docktodesktop - boolean
+$pref::graal::dontsavepasswords - boolean
+$pref::graal::dontsavepms - boolean
+$pref::graal::language - string
+$pref::graal::limitnicknames - boolean
+$pref::graal::loadbuddylistfromserver - boolean
+$pref::graal::nicknamelimit - integer
+$pref::graal::nomassmessages - boolean
+$pref::graal::notoalls - boolean
+$pref::graal::showyourselfonbuddylists - boolean
+$pref::video::defaultguistyle - string
+$pref::video::fullscreenmode - string
+$pref::video::resolution - integer
+$pref::video::screenshotformat - string
+$pref::video::windowmode - string
+addcontrol(obj)
+adddnsentry(str, str)
+addtiledef(str, str, int)
+addtiledef2(str, str, int, int)
+aindexof(float, obj) - returns integer
+allfeatures - integer (read only)
+allowedimageanimations - string - sets a list of images which will be animated, set to "all" to allow all animations
+allowloginreconnect - boolean
+allplayerscount - integer (read only)
+allrenderobjecttypes - integer (read only)
+allstats - integer (read only)
+Array - object type, parent type is TStaticVar
+Array.array(params...) - returns object
+Array.length - integer (read only)
+Array.push(params...) - returns integer - add array members at the end
+Array.splice(params...) - remove array members, parameters are start index and number of members
+Array.unshift(params...) - returns integer - insert array members at the beginning
+base64decode(str) - returns string
+base64encode(str) - returns string
+Color - object type, parent type is TStaticVar
+Color.color(params...) - returns object
+Color.setrgb(int)
+cursoroff()
+cursoron()
+Date - object type, parent type is TStaticVar
+Date.date(params...) - returns object
+dd<???? ????????() - returns string
+decompressfile(str, str, str, int) - returns boolean - parameters are filename, file name pattern (*), destination folder and flags (1 (keep zip paths) + 2 (keep original modification time)); unzips a file into the specified folder
+disableactionprojectile - boolean - by default the player and npcs get an onActionProjectile event when a projectile hits them; with this flag you can disable that for speedup
+disableactionprojectile2 - boolean - when a projectile lands on the ground or hits an object then an event onActionProjectile2 is sent to all scripts; with this flag you can disable that for speedup; on mobile platforms it's disabled by default
+disabledefmovement()
+disablemap()
+disablenpchits - boolean - disables detection of npcs hitting players or baddies; can speed up things on maps with many npcs
+disablenpconnpchits - boolean - disables detection of client-side npcs hitting each other with sword; can speed up things on maps with many npcs; by default disabled on mobile platforms
+disablepause()
+disableselectweapons()
+downloadfile - string (read only)
+downloadfiletofolder(str, str) - download a file (from the currently opened folder in scripted RC) to the specified destination (folder+name), if the script has access to the folder
+downloadpos - integer (read only)
+downloadsize - integer (read only)
+drawallinsidenpcs - boolean - set this to true if you want all npcs being displayed in non-gmap levels (possibly needed if you have many npcs using showimg())
+emoticonchar - string (read only)
+enabledefmovement()
+enablefeatures(int)
+enableganimoviereposition - boolean
+enablemap()
+enablepause()
+enableselectweapons()
+explodebomb(int)
+fileupdateignore(str) - ignores further updates of the file on server-side
+findani(str) - returns object
+findnpcbyid(int) - returns object
+focusx - float (read only)
+focusy - float (read only)
+freefileresources(str)
+freezeplayer(float)
+getbasepackage() - returns object
+getcallstack() - returns object
+getdisplaydevicelist() - returns object - lists available display devices (OpenGL, DirectX9)
+getdownloadedupdatepackagesize() - returns integer
+getdownloadingpackage() - returns object
+getdownloadingpackagescount() - returns integer
+getdownloadprogress(str) - returns float
+gethttprequest(str, int, str) - returns object
+getimgpixel(str, int, int) - returns object
+getkeycode(str) - returns integer
+getloginaccountname() - returns string
+getmusicfilename() - returns string - returns the currently played music
+getpackagesdownloadcomplete() - returns boolean
+getpackagesdownloaded() - returns boolean
+getplatform() - returns string
+getplayerlisticons() - returns object
+getpremiumoption() - returns string
+getresolutionlist() - returns object - lists available fullscreen resolutions for the current device
+gettextheight(float, str, str) - returns integer
+gettextwidth(float, str, str, str) - returns integer
+gettileset() - returns string - returns the current main tileset (pics1.png, picso.png etc.)
+gettilesettype() - returns integer - returns the current tileset type (pics1.png:0, picso.png:5 etc.)
+gettotalupdatepackagesize() - returns integer
+getupdatepackage(str) - returns object
+getz(float, float) - returns float
+ghostsnear - boolean (read only)
+Global - object type
+graalcontrolhasfocus(bool) - returns boolean - parameter says if it should also check if the chat bar has the focus
+graalplugincookie - string (read only)
+GuiAccordionCtrl - object type, parent type is GuiAnimationCtrl
+GuiAccordionCtrl.addrow(int) - returns object - parameter is id, returns the added row
+GuiAccordionCtrl.backgroundimage - string
+GuiAccordionCtrl.clearrows()
+GuiAccordionCtrl.insertrow(int, int) - returns object - parameters are the insert position and id, returns the inserted row
+GuiAccordionCtrl.removerow(int)
+GuiAccordionCtrl.removerowbyid(int)
+GuiAccordionEntry - object type, parent type is TGraalVar
+GuiAccordionEntry.id - integer
+GuiAccordionEntry.image - string
+GuiAccountPasswordCtrl - object type, parent type is GuiTextEditCtrl
+GuiAccountPasswordCtrl.applypassword()
+GuiAccountPasswordCtrl.clearpassword()
+GuiAccountPasswordCtrl.isempty() - returns boolean
+GuiAccountPasswordCtrl.setpasswordofaccount(str)
+GuiAnimationCtrl - object type, parent type is GuiControl
+GuiAnimationCtrl.animationtime - float
+GuiAnimationCtrl.getselectedrow() - returns integer - row index
+GuiAnimationCtrl.onAnimationEnd(int) event - finished moving: new entry index
+GuiAnimationCtrl.onAnimationStart(int, int) event - started moving: current entry index, destination entry index
+GuiAnimationCtrl.rowcount() - returns integer
+GuiAnimationCtrl.selectedrow - integer
+GuiAnimationCtrl.setselectedrow(int)
+GuiArrayCtrl - object type, parent type is GuiControl
+GuiArrayCtrl.allowmultipleselections - boolean
+GuiArrayCtrl.onOpenMenu(int, int, int, int) event - right click on an entry: column, row, mouse x and y
+GuiArrayCtrl.onSelect(int, int) event - an entry has been selected: column and row
+GuiBitmapBorderCtrl - object type, parent type is GuiControl
+GuiBitmapBorderCtrl.tile - boolean
+GuiBitmapButtonCtrl - object type, parent type is GuiButtonBaseCtrl
+GuiBitmapButtonCtrl.mouseoverbitmap - string
+GuiBitmapButtonCtrl.normalbitmap - string
+GuiBitmapButtonCtrl.pressedbitmap - string
+GuiBitmapButtonCtrl.setbitmap(str, int) - parameters are the bitmap and index (0, 1, 2 for normal, mouse over and pressed state)
+GuiBitmapCtrl - object type, parent type is GuiControl
+GuiBitmapCtrl.bitmap - string
+GuiBitmapCtrl.bitmaprectangle - string - by default the full bitmap is drawn: set this to {x,y,width,height} to only draw some part of the image
+GuiBitmapCtrl.fullbitmap - boolean - if bitmaprectangle has been set then this is false; set this to true to unset the bitmaprectangle
+GuiBitmapCtrl.setbitmap(str)
+GuiBitmapCtrl.setvalue(int, int) - sets the offset of the image (horizontal and vertical)
+GuiBitmapCtrl.tile - boolean - specifies if the bitmap should be repeated (true) or stretched (false)
+GuiBitmapCtrl.wrap - boolean - same as 'tile', kept for compatibility
+GuiBrowserCtrl - object type, parent type is GuiControl
+GuiBrowserCtrl.url - string
+GuiButtonBaseCtrl - object type, parent type is GuiControl
+GuiButtonBaseCtrl.buttontype - string
+GuiButtonBaseCtrl.checked - boolean
+GuiButtonBaseCtrl.gettext() - returns string
+GuiButtonBaseCtrl.groupnum - integer
+GuiButtonBaseCtrl.settext(str)
+GuiButtonBaseCtrl.text - string
+GuiButtonCtrl - object type, parent type is GuiButtonBaseCtrl
+GuiButtonCtrl.seticonsize(int, int)
+GuiButtonCtrl.stylesection - string
+GuiCheckBoxCtrl - object type, parent type is GuiButtonBaseCtrl
+GuiContextMenuCtrl - object type, parent type is GuiControl
+GuiContextMenuCtrl.addrow(int, str) - returns object - the added row
+GuiContextMenuCtrl.clearrows()
+GuiContextMenuCtrl.clearselection()
+GuiContextMenuCtrl.clipcolumntext - boolean
+GuiContextMenuCtrl.close()
+GuiContextMenuCtrl.columns - string - of format "0 16", offset of the tabulators
+GuiContextMenuCtrl.enumerate - boolean
+GuiContextMenuCtrl.findtext(str) - returns integer - row index
+GuiContextMenuCtrl.findtextid(str) - returns integer - row id
+GuiContextMenuCtrl.fitparentwidth - boolean
+GuiContextMenuCtrl.getrowatpoint(int, int) - returns integer - row index
+GuiContextMenuCtrl.getrowidatpoint(int, int) - returns integer - row id
+GuiContextMenuCtrl.getrownumbyid(int) - returns integer
+GuiContextMenuCtrl.getselectedid() - returns integer - row id
+GuiContextMenuCtrl.getselectedids() - returns object - array of row ids
+GuiContextMenuCtrl.getselectedrow() - returns integer - row index
+GuiContextMenuCtrl.getselectedrows() - returns object - array of row indices
+GuiContextMenuCtrl.getselectedtext() - returns string
+GuiContextMenuCtrl.groupsortorder - string
+GuiContextMenuCtrl.iconheight - integer (read only)
+GuiContextMenuCtrl.iconwidth - integer (read only)
+GuiContextMenuCtrl.insertrow(int, int, str) - returns object - the inserted row
+GuiContextMenuCtrl.isidselected(int) - returns boolean
+GuiContextMenuCtrl.isopen() - returns boolean
+GuiContextMenuCtrl.isrowselected(int) - returns boolean
+GuiContextMenuCtrl.makevisible(int)
+GuiContextMenuCtrl.makevisiblebyid(int)
+GuiContextMenuCtrl.maxpopupheight - integer
+GuiContextMenuCtrl.onCancel() event - the menu has been closed without selecting an entry
+GuiContextMenuCtrl.onSelect(int, str, int) event - a menu entry has been selected: id, text and row
+GuiContextMenuCtrl.open(int, int) - opens the menu at the specified screen position, if possible use openAtMouse() instead
+GuiContextMenuCtrl.openatmouse()
+GuiContextMenuCtrl.profile - object
+GuiContextMenuCtrl.removerow(int)
+GuiContextMenuCtrl.removerowbyid(int)
+GuiContextMenuCtrl.resizecell - boolean
+GuiContextMenuCtrl.rowcount() - returns integer
+GuiContextMenuCtrl.rows - object (read only)
+GuiContextMenuCtrl.scrollprofile - object
+GuiContextMenuCtrl.selected - object (read only)
+GuiContextMenuCtrl.selectedid - integer
+GuiContextMenuCtrl.selectedrow - integer
+GuiContextMenuCtrl.seticonsize(int, int)
+GuiContextMenuCtrl.setrowactivebyid(int, bool)
+GuiContextMenuCtrl.setrowbyid(int, str)
+GuiContextMenuCtrl.setselectedbyid(int)
+GuiContextMenuCtrl.setselectedbyids(str) - set an array of selected row ids; requires allowmultipleselections=true
+GuiContextMenuCtrl.setselectedbytext(str)
+GuiContextMenuCtrl.setselectedrow(int)
+GuiContextMenuCtrl.setselectedrows(str) - set an array of selected row indices; requires allowmultipleselections=true
+GuiContextMenuCtrl.sort()
+GuiContextMenuCtrl.sortcolumn - integer
+GuiContextMenuCtrl.sortmode - string - either "value", "name" or "extension"
+GuiContextMenuCtrl.sortorder - string
+GuiContextMenuCtrl.textprofile - object
+GuiContextMenuCtrl.width - integer
+GuiControl.acceptdropfiles - boolean
+GuiControl.active - boolean
+GuiControl.addcontrol(obj)
+GuiControl.alpha - float
+GuiControl.areaclickpriority - integer - for iPhone/Android: 2 means you can click it even if not clicking directly on it (buttons), 1 means that nearby buttons are ignored (text field), 0 means a click is only received if you click directly on it and there are no other area-click controls near
+GuiControl.awake - boolean (read only)
+GuiControl.bitmapcache - boolean - caches the control and all its sub-controls in a bitmap buffer to speed up drawing when there are a lot of small graphics which don't change often
+GuiControl.blue - float
+GuiControl.bounds - string - array of {x,y,width,height}, combination of position and extent
+GuiControl.bringtofront()
+GuiControl.canmove - boolean
+GuiControl.canresize - boolean
+GuiControl.clearcontrols()
+GuiControl.clientextent - string
+GuiControl.clientheight - integer
+GuiControl.clientwidth - integer
+GuiControl.clipchildren - boolean - by default true; specifies if child controls are clipped to their bounds (text or graphics outside of the bounds will not be shown)
+GuiControl.clipmove - boolean - when the user moves the control (see canMove) then this makes sure that the control is not moving outside the parents bounds, by default true
+GuiControl.cliptobounds - boolean - by default true; specifies if the control should be clipped (might be usefull for GuiShowImgCtrl to disable this); this is ignored if parent.clipchildren is already false
+GuiControl.color - string
+GuiControl.createanimation() - returns object - creates an animation object which can be used to animate the position, rotation or color of the control
+GuiControl.cursor - string - sets the cursor which is displayed when the mouse hovers over this control, currently supports default, hand/pointer, text, crosshair, drag, col-resize, row-resize, wait, progress, help (also depends on the system)
+GuiControl.destroy()
+GuiControl.editing - boolean
+GuiControl.extent - string - width and height of the control
+GuiControl.fastchildrender - boolean - optimized OpenGL rendering of sub-GuiBitmapCtrls: they must be not tiled, no child-controls, no colors, bitmaprectangle is not supported
+GuiControl.findcontrol(str) - returns object - finds the control at the specified point {x,y}, e.g. for mouse operations
+GuiControl.firstresponder - object - the sub-control which receives keyboard input
+GuiControl.flickerbasetime - float - if you want to let controls flicker at different time but with the same frequency, then set this to some random value (e.g. random(0,1))
+GuiControl.flickering - boolean - lets the control automatically show and hide itself in flickertime intervals
+GuiControl.flickertime - float - says in what interval the control is shown and hidden, in seconds; works only in combination with flickering=true
+GuiControl.getparent() - returns object
+GuiControl.globaltolocalcoord(str) - returns string - converts global screen coordinates to a position relative to the controls origin {0,0}, can be used to know where exactly the user has clicked inside a control
+GuiControl.green - float
+GuiControl.height - integer
+GuiControl.hide()
+GuiControl.hint - string - text which is displayed when the user moves the mouse over the control
+GuiControl.hinttime - float - says after how much time of not moving the mouse the hint should appear
+GuiControl.horizsizing - string - specifies the horizontal resizing behaviour when the parent control is resized: right, width, left, center or relative
+GuiControl.isactuallyvisible() - returns boolean
+GuiControl.isfirstresponder() - returns boolean
+GuiControl.isinanimation - boolean
+GuiControl.isininoutanimation - boolean
+GuiControl.ismouselocked(int) - returns boolean - checks wether the specified mouse (usually 0) has been locked to the control by mouseLock()
+GuiControl.localtoglobalcoord(str) - returns string - converts a position relative to the controls origin {0,0} to global screen coordinates, can be used to know where on the screen a control is displayed in case it is a child of another control (e.g. GuiWindowCtrl or GuiScrollCtrl)
+GuiControl.lockmousedown - boolean - if you click on the control it locks the mouse to this control until released, like a button
+GuiControl.makefirstresponder(bool)
+GuiControl.minextent - string - minimum width and height for the control which should be enforced
+GuiControl.minsize - string - the same as "minExtent"
+GuiControl.mode - integer - the control drawing mode (0 - add, 1 - transparent, 2 - subtract, 3 - daynight)
+GuiControl.mouselock(int) - if you call this, and the mouse leaves the control (onMouseLeave) then you will continue getting onMouseDragged events and you will get an onMouseUp event even when the mouse is currently not in the GUI control rectangle; some GUI controls call this automatically when clicking on the control; parameter is the mouse id, which is usually 0 (fifth parameter of mouse events)
+GuiControl.mouseunlock(int) - unlocks the mouse from the control, you will only get events when the mouse is inside the GUI control; see mouseLock() for more information
+GuiControl.mouseunlockall() - unlocks all mouses (multitouch), see mouseLock() for more information
+GuiControl.onAction() event - an action happened (e.g. button pressed)
+GuiControl.onAdd() event - the control has been added as child to another control
+GuiControl.onAnimationFinished(str) event - all animations finished, parameter is the last transition type
+GuiControl.onDialogPop() event - the control is no longer the dialog control (popDialog())
+GuiControl.onDialogPush() event - the control is now the dialog control (pushDialog())
+GuiControl.onDropFiles(int, int, obj) event - files dropped from explorer/finder to the control (acceptdropfiles must be true): x, y, filelist
+GuiControl.onHide() event - the control is no longer visible on the screen
+GuiControl.onKeyDown(int, str, int) event - a key has been pressed: keycode, keytext, scancode
+GuiControl.onKeyUp(int, str, int) event - a key has been released: keycode, keytext, scancode
+GuiControl.onMouseDown(int, int, int, int) event - mouse click: key modifiers, mouse x and y, click count
+GuiControl.onMouseDragged(int, int, int, int) event - mouse moved while holding the mouse button down: key modifiers, mouse x and y, click count
+GuiControl.onMouseEnter(int, int, int, int) event - mouse enters the area of the control: key modifiers, mouse x and y, click count
+GuiControl.onMouseLeave(int, int, int, int) event - mouse leaves the are of the control: key modifiers, mouse x and y, click count
+GuiControl.onMouseMove(int, int, int, int) event - mouse moved: key modifiers, mouse x and y, click count
+GuiControl.onMouseUp(int, int, int, int) event - mouse button released: key modifiers, mouse x and y, click count
+GuiControl.onMouseWheelDown(int, int, int, int) event - mouse wheel scrolled down: key modifiers, mouse x and y, click count
+GuiControl.onMouseWheelUp(int, int, int, int) event - mouse wheel scrolled up: key modifiers, mouse x and y, click count
+GuiControl.onMove(int, int) event - the control has been moved to x, y
+GuiControl.onRemove() event - the control has been removed from its parent
+GuiControl.onResize(int, int) event - the control has been resized to width, height
+GuiControl.onRightMouseDown(int, int, int, int) event - right mouse click: key modifiers, mouse x and y, click count
+GuiControl.onRightMouseDragged(int, int, int, int) event - mouse moved while holding the right mouse button down: key modifiers, mouse x and y, click count
+GuiControl.onRightMouseUp(int, int, int, int) event - right mouse button released: key modifiers, mouse x and y, click count
+GuiControl.onShow() event - the control becomes actually visible on the screen
+GuiControl.onSleep() event - the control is not part of the screen anymore
+GuiControl.onStartDrag() event - the user is moving the control
+GuiControl.onStopDrag(int, int, int, int) event - stopped moving a control: key modifiers, mouse x and y, click count
+GuiControl.onStyleChanges() event - the GUI style has changed
+GuiControl.onWake() event - the control has been added to the screen
+GuiControl.parent - object (read only)
+GuiControl.position - string
+GuiControl.pushtoback()
+GuiControl.repaint() - forces repaint of the whole control (only useful for external windows)
+GuiControl.resize(int, int, int, int)
+GuiControl.resizeheight - boolean
+GuiControl.resizewidth - boolean
+GuiControl.rotation - float
+GuiControl.rotationcenter - string - the current rotation center (default {0,0})
+GuiControl.scrolllinex - integer - if this is the first control inside a GuiScrollCtrl, then this defines by how many pixel the scroll control is scrolled horizontally when clicking on the left/right scroll bar buttons
+GuiControl.scrollliney - integer - if this is the first control inside a GuiScrollCtrl, then this defines by how many pixel the scroll control is scrolled vertically when clicking on the up/down scroll bar buttons
+GuiControl.show()
+GuiControl.showhint - boolean - whether the hint should be shown when the user moves the mouse over the control
+GuiControl.showtop() - calls show(), tabfirst() and bringtofront()
+GuiControl.sortcontrols() - sorts the sub-controls depending on their y-coordinate
+GuiControl.startdrag()
+GuiControl.stopanimations() - stops all previously created animations
+GuiControl.stopinoutanimations() - stops all animations which move the control in or out of the screen
+GuiControl.style - string
+GuiControl.tabfirst() - returns object
+GuiControl.useownprofile - boolean
+GuiControl.vertsizing - string - specifies the vertical resizing behaviour when the parent control is resized: bottom, height, top, center or relative
+GuiControl.visible - boolean
+GuiControl.width - integer
+GuiCursor - object type, parent type is TGraalVar
+GuiDrawingPanel - object type, parent type is GuiControl
+GuiDrawingPanel.availablefilters - object (read only) - available filters for filterrectangle()
+GuiDrawingPanel.clearall()
+GuiDrawingPanel.clearrectangle(int, int, int, int) - x, y, width and height
+GuiDrawingPanel.drawcurve(int, int, int, int, int, int, float) - draws a curve with profile.fontcolor, parameters are x1,y1,x2,y2,x3,y3,linewidth (the curve goes close to x2,y2 but not through it)
+GuiDrawingPanel.drawimage(int, int, str) - x, y, source image
+GuiDrawingPanel.drawimagerectangle(int, int, str, int, int, int, int) - destination x and y, source image, source x,y,width and height
+GuiDrawingPanel.drawimagestretched(int, int, int, int, str, int, int, int, int) - destination x,y,width and height, source image, source x,y,width and height
+GuiDrawingPanel.drawline(int, int, int, int, float) - draws a line with profile.fontcolor, parameters are x1,y1,x2,y2,linewidth
+GuiDrawingPanel.drawobject(int, int, obj) - destination x and y, object to draw (e.g. player)
+GuiDrawingPanel.drawtext(int, int, str) - draws text with the current profile, parameters are x, y and the text to draw
+GuiDrawingPanel.filterrectangle(int, int, int, int, str) - returns boolean - applys a filter (x,y,width,height,filter type), possible filter types are gray, nightgoggle, negative, updown, blackwhite and lesscolors
+GuiDrawingPanel.maskimage(int, int, str, str) - draws an image (x,y,filename) on top with a special mask operation (add or multiply)
+GuiDrawingPanel.parth - integer (read only)
+GuiDrawingPanel.partw - integer (read only)
+GuiDrawingPanel.partx - integer (read only)
+GuiDrawingPanel.party - integer (read only)
+GuiDrawingPanel.saveimage(str)
+GuiDrawingPanel.saveimage2(str, int) - saves the drawing panel under the specified filename, second parameter is the bitdepth (24 or 32)
+GuiFlash - object type, parent type is GuiControl
+GuiFlash.backgroundalpha - float
+GuiFlash.downloadwebfiles - boolean
+GuiFlash.flash - object (read only) - gives access to the flash resources
+GuiFlash.hideonoverlap - boolean
+GuiFlash.loadmovie(str, bool, float)
+GuiFlash.loopmovie - boolean
+GuiFlash.messageonoverlap - string
+GuiFlash.moviename - string
+GuiFlash.playmovie()
+GuiFlash.restartmovie()
+GuiFlash.setbackgroundalpha(float)
+GuiFlash.setlooping(bool)
+GuiFlash.stopmovie()
+GuiFrameSetCtrl - object type, parent type is GuiControl
+GuiFrameSetCtrl.autobalance - boolean
+GuiFrameSetCtrl.bordercolor - string
+GuiFrameSetCtrl.borderenable - string
+GuiFrameSetCtrl.bordermovable - string
+GuiFrameSetCtrl.borderwidth - integer
+GuiFrameSetCtrl.columncount - integer
+GuiFrameSetCtrl.fudgefactor - integer
+GuiFrameSetCtrl.getcolumncount() - returns integer
+GuiFrameSetCtrl.getcolumnoffset(int) - returns integer
+GuiFrameSetCtrl.getrowcount() - returns integer
+GuiFrameSetCtrl.getrowoffset(int) - returns integer
+GuiFrameSetCtrl.minextent - string
+GuiFrameSetCtrl.rowcount - integer
+GuiFrameSetCtrl.setcolumncount(int)
+GuiFrameSetCtrl.setcolumnoffset(int, int)
+GuiFrameSetCtrl.setrowcount(int)
+GuiFrameSetCtrl.setrowoffset(int, int)
+GuiGraalCtrl - object type, parent type is GuiControl
+GuiGraalCtrl.isrendering - boolean - says if the game is rendered, set to false if you want to only show GUI and not the tiles and players
+GuiMenuCtrl - object type, parent type is GuiControl
+GuiMenuCtrl.addmenu(str) - returns object
+GuiMenuCtrl.clearmenus()
+GuiMenuCtrl.findmenu(str) - returns object
+GuiMenuCtrl.iconheight - integer (read only)
+GuiMenuCtrl.iconwidth - integer (read only)
+GuiMenuCtrl.onCancel() event - the menu has been closed without selecting a menu entry
+GuiMenuCtrl.onIconResized(int, int) event - the size of the icons has been changed: new width and height
+GuiMenuCtrl.onSelect(str, int, str, int) event - a menu item has been selected: menu name, selection id, text and row
+GuiMenuCtrl.removemenu(str)
+GuiMenuCtrl.seticonsize(int, int)
+GuiMLTextCtrl - object type, parent type is GuiControl
+GuiMLTextCtrl.addtext(str, bool)
+GuiMLTextCtrl.allowedtags - string
+GuiMLTextCtrl.alpha - float
+GuiMLTextCtrl.cursorposition - integer - cursor position in the text
+GuiMLTextCtrl.deniedsound - string
+GuiMLTextCtrl.deselecttext() - deselects any currently selected text
+GuiMLTextCtrl.disallowedtags - string
+GuiMLTextCtrl.findtext(str, int) - returns integer - searches for a sub string in the current text, returns the position if found, otherwise -1; second parameter are flags: 1 (wrap at text end) + 2 (case sensitive)
+GuiMLTextCtrl.findtextat(str, int, int) - returns integer - searches for a sub string in the current text starting at the specified position, returns the position of the next match if found, otherwise -1; thirdparameter are flags: 1 (wrap at text end) + 2 (case sensitive)
+GuiMLTextCtrl.getcolumnandlineofposition(int) - returns string - returns {column, line} of the specified position in the text
+GuiMLTextCtrl.getcursorline() - returns integer
+GuiMLTextCtrl.getline(int) - returns string
+GuiMLTextCtrl.getlinecount() - returns integer
+GuiMLTextCtrl.getlines() - returns object - array of lines
+GuiMLTextCtrl.getselectedlength() - returns integer - returns the length of the current selection, -1 if there is none
+GuiMLTextCtrl.getselectedposition() - returns integer - returns the position of the current selection, -1 if there is none
+GuiMLTextCtrl.gettext() - returns string
+GuiMLTextCtrl.htmlcompatibility - boolean
+GuiMLTextCtrl.htmllinks - boolean - will automatically open a webbrowser when clicking on a link if you don't want to do it yourself by handling onURL() events via script
+GuiMLTextCtrl.maxchars - integer
+GuiMLTextCtrl.onCursorLineChanged(int) event - cursor moved: new line number
+GuiMLTextCtrl.onReflow(int, int) event - the displayed content changed: new visible width and height
+GuiMLTextCtrl.onRightSelectTag(str) event - right click on: tag id
+GuiMLTextCtrl.onSelectTag(str) event - the user clicked on a tag or bitmap: tag id
+GuiMLTextCtrl.onURL(str) event - the user clicked on an url
+GuiMLTextCtrl.parsetags - boolean
+GuiMLTextCtrl.plaintext - string - the text of the control without character escaping
+GuiMLTextCtrl.reflow() - calculates the position of the text elements on the screen, this is automatically done before rendering
+GuiMLTextCtrl.replacetext(str, str, int) - returns integer - parameters are old text and new text; replaces all occurences of old text with new text, returns how many replacements were done; thirdparameter are flags: 2 (case sensitive)
+GuiMLTextCtrl.scrolltobottom()
+GuiMLTextCtrl.scrolltoline(int)
+GuiMLTextCtrl.scrolltoposition(int)
+GuiMLTextCtrl.scrolltotag(str)
+GuiMLTextCtrl.scrolltotop()
+GuiMLTextCtrl.selecttext(int, int) - returns boolean - parameters are position and length of text to select, returns if it successfully selected it
+GuiMLTextCtrl.setcursorcolumnandline(int, int)
+GuiMLTextCtrl.setlines(obj)
+GuiMLTextCtrl.settext(str)
+GuiMLTextCtrl.syntaxhighlighting - boolean
+GuiMLTextCtrl.text - string
+GuiMLTextCtrl.trimhorizontally() - when you only have centered text then this is removing the space on the left and right side
+GuiMLTextCtrl.urlbase - string
+GuiMLTextCtrl.wordwrap - boolean
+GuiMLTextEditCtrl - object type, parent type is GuiMLTextCtrl
+GuiMLTextEditCtrl.autoindenting - boolean - when pressing the return key, then it's automatically inserting the same number of spaces in front of the new line as in the previous line
+GuiMLTextEditCtrl.showcursor - boolean
+GuiMLTextEditCtrl.tabspaces - integer - when the user presses the tab key then this number of spaces are inserted, by default the tab key is ignored
+GuiMLTextEditCtrl.undostacksize - integer - number of undo operations (default 16)
+GuiPMCtrl - object type, parent type is GuiMLTextCtrl
+GuiPMCtrl.addpm(obj) - adds the received pm from the specified player to the text of this control
+GuiPMCtrl.clear()
+GuiPMCtrl.showpm(obj) - replaces the text with the received pm from this player
+GuiPMEditCtrl - object type, parent type is GuiMLTextEditCtrl
+GuiPMEditCtrl.clear()
+GuiPMEditCtrl.sendmasspm(obj)
+GuiPMEditCtrl.sendpm(obj)
+GuiPMHistoryCtrl - object type, parent type is GuiMLTextCtrl
+GuiPMHistoryCtrl.showhistory(obj)
+GuiPopUpEditCtrl - object type, parent type is GuiTextCtrl
+GuiPopUpEditCtrl.addrow(int, str) - returns object - the added row
+GuiPopUpEditCtrl.addtext(str, int) - deprecated, use addRow() instead
+GuiPopUpEditCtrl.clearrows()
+GuiPopUpEditCtrl.clearselection()
+GuiPopUpEditCtrl.clipcolumntext - boolean
+GuiPopUpEditCtrl.close()
+GuiPopUpEditCtrl.columns - string - of format "0 16", offset of the tabulators
+GuiPopUpEditCtrl.enumerate - boolean
+GuiPopUpEditCtrl.findtext(str) - returns integer
+GuiPopUpEditCtrl.findtext(str) - returns integer - row index
+GuiPopUpEditCtrl.findtextid(str) - returns integer - row id
+GuiPopUpEditCtrl.fitparentwidth - boolean
+GuiPopUpEditCtrl.forceclose()
+GuiPopUpEditCtrl.forceonaction()
+GuiPopUpEditCtrl.getrowatpoint(int, int) - returns integer - row index
+GuiPopUpEditCtrl.getrowidatpoint(int, int) - returns integer - row id
+GuiPopUpEditCtrl.getrownumbyid(int) - returns integer
+GuiPopUpEditCtrl.getselected() - returns integer
+GuiPopUpEditCtrl.getselectedid() - returns integer - row id
+GuiPopUpEditCtrl.getselectedids() - returns object - array of row ids
+GuiPopUpEditCtrl.getselectedrow() - returns integer - row index
+GuiPopUpEditCtrl.getselectedrows() - returns object - array of row indices
+GuiPopUpEditCtrl.getselectedtext() - returns string
+GuiPopUpEditCtrl.groupsortorder - string
+GuiPopUpEditCtrl.iconheight - integer (read only)
+GuiPopUpEditCtrl.iconwidth - integer (read only)
+GuiPopUpEditCtrl.insertrow(int, int, str) - returns object - the inserted row
+GuiPopUpEditCtrl.isidselected(int) - returns boolean
+GuiPopUpEditCtrl.isopen() - returns boolean
+GuiPopUpEditCtrl.isrowselected(int) - returns boolean
+GuiPopUpEditCtrl.makevisible(int)
+GuiPopUpEditCtrl.makevisiblebyid(int)
+GuiPopUpEditCtrl.maxpopupheight - integer
+GuiPopUpEditCtrl.onCancel() event - the menu has been closed without selecting an entry
+GuiPopUpEditCtrl.onSelect(int, str, int) event - a menu entry has been selected: id, text and row
+GuiPopUpEditCtrl.open(int, int) - opens the menu at the specified screen position, if possible use openAtMouse() instead
+GuiPopUpEditCtrl.openatmouse()
+GuiPopUpEditCtrl.profile - object
+GuiPopUpEditCtrl.removerow(int)
+GuiPopUpEditCtrl.removerowbyid(int)
+GuiPopUpEditCtrl.resizecell - boolean
+GuiPopUpEditCtrl.rowcount() - returns integer
+GuiPopUpEditCtrl.rows - object (read only)
+GuiPopUpEditCtrl.scrollprofile - object
+GuiPopUpEditCtrl.selected - object (read only)
+GuiPopUpEditCtrl.selectedid - integer
+GuiPopUpEditCtrl.selectedrow - integer
+GuiPopUpEditCtrl.seticonsize(int, int)
+GuiPopUpEditCtrl.setrowactivebyid(int, bool)
+GuiPopUpEditCtrl.setrowbyid(int, str)
+GuiPopUpEditCtrl.setselected(int)
+GuiPopUpEditCtrl.setselectedbyid(int)
+GuiPopUpEditCtrl.setselectedbyids(str) - set an array of selected row ids; requires allowmultipleselections=true
+GuiPopUpEditCtrl.setselectedbytext(str)
+GuiPopUpEditCtrl.setselectedrow(int)
+GuiPopUpEditCtrl.setselectedrows(str) - set an array of selected row indices; requires allowmultipleselections=true
+GuiPopUpEditCtrl.sort()
+GuiPopUpEditCtrl.sortcolumn - integer
+GuiPopUpEditCtrl.sortmode - string - either "value", "name" or "extension"
+GuiPopUpEditCtrl.sortorder - string
+GuiPopUpEditCtrl.textprofile - object
+GuiPopUpEditCtrl.width - integer
+GuiPopUpMenuCtrl - object type, parent type is GuiTextCtrl
+GuiPopUpMenuCtrl.addrow(int, str) - returns object - the added row
+GuiPopUpMenuCtrl.addtext(str, int) - deprecated, use addRow() instead
+GuiPopUpMenuCtrl.clearrows()
+GuiPopUpMenuCtrl.clearselection()
+GuiPopUpMenuCtrl.clipcolumntext - boolean
+GuiPopUpMenuCtrl.close()
+GuiPopUpMenuCtrl.columns - string - of format "0 16", offset of the tabulators
+GuiPopUpMenuCtrl.enumerate - boolean
+GuiPopUpMenuCtrl.findtext(str) - returns integer
+GuiPopUpMenuCtrl.findtext(str) - returns integer - row index
+GuiPopUpMenuCtrl.findtextid(str) - returns integer - row id
+GuiPopUpMenuCtrl.fitparentwidth - boolean
+GuiPopUpMenuCtrl.forceclose()
+GuiPopUpMenuCtrl.forceonaction()
+GuiPopUpMenuCtrl.getrowatpoint(int, int) - returns integer - row index
+GuiPopUpMenuCtrl.getrowidatpoint(int, int) - returns integer - row id
+GuiPopUpMenuCtrl.getrownumbyid(int) - returns integer
+GuiPopUpMenuCtrl.getselected() - returns integer
+GuiPopUpMenuCtrl.getselectedid() - returns integer - row id
+GuiPopUpMenuCtrl.getselectedids() - returns object - array of row ids
+GuiPopUpMenuCtrl.getselectedrow() - returns integer - row index
+GuiPopUpMenuCtrl.getselectedrows() - returns object - array of row indices
+GuiPopUpMenuCtrl.getselectedtext() - returns string
+GuiPopUpMenuCtrl.groupsortorder - string
+GuiPopUpMenuCtrl.iconheight - integer (read only)
+GuiPopUpMenuCtrl.iconwidth - integer (read only)
+GuiPopUpMenuCtrl.insertrow(int, int, str) - returns object - the inserted row
+GuiPopUpMenuCtrl.isidselected(int) - returns boolean
+GuiPopUpMenuCtrl.isopen() - returns boolean
+GuiPopUpMenuCtrl.isrowselected(int) - returns boolean
+GuiPopUpMenuCtrl.makevisible(int)
+GuiPopUpMenuCtrl.makevisiblebyid(int)
+GuiPopUpMenuCtrl.maxpopupheight - integer
+GuiPopUpMenuCtrl.onCancel() event - the menu has been closed without selecting an entry
+GuiPopUpMenuCtrl.onSelect(int, str, int) event - a menu entry has been selected: id, text and row
+GuiPopUpMenuCtrl.open(int, int) - opens the menu at the specified screen position, if possible use openAtMouse() instead
+GuiPopUpMenuCtrl.openatmouse()
+GuiPopUpMenuCtrl.profile - object
+GuiPopUpMenuCtrl.removerow(int)
+GuiPopUpMenuCtrl.removerowbyid(int)
+GuiPopUpMenuCtrl.resizecell - boolean
+GuiPopUpMenuCtrl.rowcount() - returns integer
+GuiPopUpMenuCtrl.rows - object (read only)
+GuiPopUpMenuCtrl.scrollprofile - object
+GuiPopUpMenuCtrl.selected - object (read only)
+GuiPopUpMenuCtrl.selectedid - integer
+GuiPopUpMenuCtrl.selectedrow - integer
+GuiPopUpMenuCtrl.seticonsize(int, int)
+GuiPopUpMenuCtrl.setrowactivebyid(int, bool)
+GuiPopUpMenuCtrl.setrowbyid(int, str)
+GuiPopUpMenuCtrl.setselected(int)
+GuiPopUpMenuCtrl.setselectedbyid(int)
+GuiPopUpMenuCtrl.setselectedbyids(str) - set an array of selected row ids; requires allowmultipleselections=true
+GuiPopUpMenuCtrl.setselectedbytext(str)
+GuiPopUpMenuCtrl.setselectedrow(int)
+GuiPopUpMenuCtrl.setselectedrows(str) - set an array of selected row indices; requires allowmultipleselections=true
+GuiPopUpMenuCtrl.sort()
+GuiPopUpMenuCtrl.sortcolumn - integer
+GuiPopUpMenuCtrl.sortmode - string - either "value", "name" or "extension"
+GuiPopUpMenuCtrl.sortorder - string
+GuiPopUpMenuCtrl.textprofile - object
+GuiPopUpMenuCtrl.width - integer
+GuiProgressCtrl - object type, parent type is GuiControl
+GuiProgressCtrl.progress - float
+GuiRadioCtrl - object type, parent type is GuiCheckBoxCtrl
+GuiScrollCtrl - object type, parent type is GuiControl
+GuiScrollCtrl.childmargin - string
+GuiScrollCtrl.constantthumbheight - boolean
+GuiScrollCtrl.hscrollbar - string
+GuiScrollCtrl.onScrolled(int, int, int, int) event - visible area scrolled: new x and y, delta x and y
+GuiScrollCtrl.scrolldelta(int, int)
+GuiScrollCtrl.scrollpos - string
+GuiScrollCtrl.scrollrectvisible(int, int, int, int)
+GuiScrollCtrl.scrollto(int, int)
+GuiScrollCtrl.scrolltobottom() - scrolls to the button, simply calls scrollto(0, 0x7fffffff)
+GuiScrollCtrl.scrolltotop() - scrolls to the top, simply calls scrollto(0, 0)
+GuiScrollCtrl.tile - boolean
+GuiScrollCtrl.vscrollbar - string
+GuiScrollCtrl.wheelscrolllines - integer
+GuiScrollCtrl.willfirstrespond - boolean
+GuiShowImgCtrl - object type, parent type is GuiControl
+GuiShowImgCtrl.actor - object (read only)
+GuiShowImgCtrl.alpha - float
+GuiShowImgCtrl.angle - float - particle movement angle
+GuiShowImgCtrl.ani - string
+GuiShowImgCtrl.attachoffset - string
+GuiShowImgCtrl.attachtoowner - boolean
+GuiShowImgCtrl.blue - float
+GuiShowImgCtrl.code - string - the old representation as 'font@style@text'
+GuiShowImgCtrl.dimension - integer
+GuiShowImgCtrl.dir - integer
+GuiShowImgCtrl.emitter - object (read only)
+GuiShowImgCtrl.flashfile - string
+GuiShowImgCtrl.font - string
+GuiShowImgCtrl.green - float
+GuiShowImgCtrl.height - float
+GuiShowImgCtrl.image - string
+GuiShowImgCtrl.imageindex - integer (read only)
+GuiShowImgCtrl.layer - integer
+GuiShowImgCtrl.lifetime - float - particle lifetime
+GuiShowImgCtrl.mode - integer - the image drawing mode (0 - add, 1 - transparent, 2 - subtract, 3 - daynight)
+GuiShowImgCtrl.movementvector - string - particle movement vector (angle + zangle + speed)
+GuiShowImgCtrl.offsetx - integer
+GuiShowImgCtrl.offsety - integer
+GuiShowImgCtrl.parth - integer
+GuiShowImgCtrl.partw - integer
+GuiShowImgCtrl.partx - integer
+GuiShowImgCtrl.party - integer
+GuiShowImgCtrl.playerlook - boolean - if the animation should take it's head, body, sword, shield and attr[] from the owner (playerlook), set this to false if you want to set the images yourself by changing showimg.actor.head etc.
+GuiShowImgCtrl.polygon - object
+GuiShowImgCtrl.position - string
+GuiShowImgCtrl.red - float
+GuiShowImgCtrl.rotation - float
+GuiShowImgCtrl.rotationcenter - string - the current rotation center (only works when useowncenter=true)
+GuiShowImgCtrl.shadowcolor - string
+GuiShowImgCtrl.shadowoffset - string
+GuiShowImgCtrl.sound - string - particle sound
+GuiShowImgCtrl.speed - float - particle movement speed
+GuiShowImgCtrl.spin - float
+GuiShowImgCtrl.stretchx - float
+GuiShowImgCtrl.stretchy - float
+GuiShowImgCtrl.style - string
+GuiShowImgCtrl.text - string
+GuiShowImgCtrl.textshadow - boolean
+GuiShowImgCtrl.uniqueparticle - boolean - says if each particle should store it's own data (good for text emitters)
+GuiShowImgCtrl.useowncenter - boolean - by default the showimg is rotated around the image center, set this to true and set rotationcenter for custom rotations
+GuiShowImgCtrl.width - float
+GuiShowImgCtrl.zangle - float - particle movement zangle
+GuiShowImgCtrl.zoom - float
+GuiSliderCtrl - object type, parent type is GuiControl
+GuiSliderCtrl.onAction(float) event - the slider value has been changed (by script or user): new slider value
+GuiSliderCtrl.onReleaseSlider(float) event - the user has finishzed moving the slider: new slider value
+GuiSliderCtrl.range - string
+GuiSliderCtrl.ticks - integer
+GuiSliderCtrl.value - float
+GuiSlideShowCtrl - object type, parent type is GuiAnimationCtrl
+GuiSlideShowCtrl.addrow(int) - returns object - parameter is id, returns the added row
+GuiSlideShowCtrl.clearrows()
+GuiSlideShowCtrl.insertrow(int, int) - returns object - parameters are the insert position and id, returns the inserted row
+GuiSlideShowCtrl.isendless - boolean
+GuiSlideShowCtrl.overlayimage - string
+GuiSlideShowCtrl.removerow(int)
+GuiSlideShowCtrl.removerowbyid(int)
+GuiSlideShowCtrl.scrollonvisible - boolean - animates the slides when the control becomes visible
+GuiSlideShowEntry - object type, parent type is TGraalVar
+GuiSlideShowEntry.id - integer
+GuiSlideShowEntry.image - string
+GuiStartMenuCtrl - object type, parent type is GuiContextMenuCtrl
+GuiStartMenuCtrl.gettext() - returns string
+GuiStartMenuCtrl.onCancel() event - the menu has been closed without selecting an entry
+GuiStartMenuCtrl.onSelect(int, str, int) event - a menu entry has been selected: id, text and row
+GuiStartMenuCtrl.onTextChanged(str) event - the menu text has been changed
+GuiStartMenuCtrl.settext(str)
+GuiStartMenuCtrl.text - string
+GuiStartMenuCtrl.width - integer
+GuiStretchCtrl - object type, parent type is GuiControl
+GuiStretchCtrl.clientextent - string
+GuiStretchCtrl.clientheight - integer
+GuiStretchCtrl.clientwidth - integer
+GuiTabCtrl - object type, parent type is GuiControl
+GuiTabCtrl.addrow(int, str) - returns object - the added row
+GuiTabCtrl.clearrows()
+GuiTabCtrl.clearselection()
+GuiTabCtrl.findtext(str) - returns integer - row index
+GuiTabCtrl.findtextid(str) - returns integer - row id
+GuiTabCtrl.getrowatpoint(int, int) - returns integer - row index
+GuiTabCtrl.getrowidatpoint(int, int) - returns integer - row id
+GuiTabCtrl.getrownumbyid(int) - returns integer
+GuiTabCtrl.getselectedid() - returns integer - row id
+GuiTabCtrl.getselectedrow() - returns integer - row index
+GuiTabCtrl.getselectedtext() - returns string
+GuiTabCtrl.iconheight - integer (read only)
+GuiTabCtrl.iconwidth - integer (read only)
+GuiTabCtrl.insertrow(int, int, str) - returns object - the inserted row
+GuiTabCtrl.isidselected(int) - returns boolean
+GuiTabCtrl.isrowselected(int) - returns boolean
+GuiTabCtrl.leveling - integer
+GuiTabCtrl.makevisible(int)
+GuiTabCtrl.makevisiblebyid(int)
+GuiTabCtrl.maxvisibletabs - integer (read only)
+GuiTabCtrl.onDeselect(int, str, int) event - a tab is no longer selected: id, text, row
+GuiTabCtrl.onIconResized(int, int) event - the size of the icons has been changed: new width and height
+GuiTabCtrl.onMouseOverCell(int, str, int) event - the mouse is hovering over a tab: id, text, row
+GuiTabCtrl.onOpenMenu(int, int, int) event - the user has clicked with the right mouse button on an entry: row, mouse x and y
+GuiTabCtrl.onSelect(int, str, int) event - a tab has been selected: id, text, row
+GuiTabCtrl.overlapwidth - integer
+GuiTabCtrl.removerow(int)
+GuiTabCtrl.removerowbyid(int)
+GuiTabCtrl.rowcount() - returns integer
+GuiTabCtrl.selected - object (read only)
+GuiTabCtrl.seticonsize(int, int)
+GuiTabCtrl.setselectedbyid(int)
+GuiTabCtrl.setselectedrow(int)
+GuiTabCtrl.tabwidth - integer
+GuiTabCtrlEntry - object type, parent type is TGraalVar
+GuiTabCtrlEntry.gettext() - returns string
+GuiTabCtrlEntry.hint - string
+GuiTabCtrlEntry.id - integer
+GuiTabCtrlEntry.settext(str)
+GuiTabCtrlEntry.text - string
+GuiTaskbar - object type, parent type is GuiControl
+GuiTextCtrl - object type, parent type is GuiControl
+GuiTextCtrl.gettext() - returns string
+GuiTextCtrl.onTextChanged(str) event - text has been changed
+GuiTextCtrl.settext(str)
+GuiTextCtrl.stylesection - string - if set to Clock then it will use Taskbar.Clock TextColour from the gui style
+GuiTextCtrl.text - string
+GuiTextEditCtrl - object type, parent type is GuiTextCtrl
+GuiTextEditCtrl.deniedsound - string
+GuiTextEditCtrl.historysize - integer
+GuiTextEditCtrl.inputtype - string - either password or default, on mobile devices also email,url and numbers
+GuiTextEditCtrl.onAction(str) event - a text has been entered (return key pressed)
+GuiTextEditCtrl.onTabComplete(bool) event - the tab key has been pressed (with or without shift key)
+GuiTextEditCtrl.password - boolean
+GuiTextEditCtrl.setselection(int, int)
+GuiTextEditCtrl.showcursor - boolean
+GuiTextEditCtrl.tabcomplete - boolean
+GuiTextEditCtrl.text - string
+GuiTextEditCtrl.undo()
+GuiTextEditSliderCtrl - object type, parent type is GuiTextEditCtrl
+GuiTextEditSliderCtrl.allowedit - string
+GuiTextEditSliderCtrl.format - string
+GuiTextEditSliderCtrl.increment - float
+GuiTextEditSliderCtrl.range - string
+GuiTextEditSliderCtrl.value - float
+GuiTextListCtrl - object type, parent type is GuiArrayCtrl
+GuiTextListCtrl.addrow(int, str) - returns object - the added row
+GuiTextListCtrl.clearrows()
+GuiTextListCtrl.clearselection()
+GuiTextListCtrl.clipcolumntext - boolean
+GuiTextListCtrl.columns - string - of format "0 16", offset of the tabulators
+GuiTextListCtrl.enumerate - boolean
+GuiTextListCtrl.findtext(str) - returns integer - row index
+GuiTextListCtrl.findtextid(str) - returns integer - row id
+GuiTextListCtrl.fitparentwidth - boolean
+GuiTextListCtrl.getrowatpoint(int, int) - returns integer - row index
+GuiTextListCtrl.getrowidatpoint(int, int) - returns integer - row id
+GuiTextListCtrl.getrownumbyid(int) - returns integer
+GuiTextListCtrl.getselectedid() - returns integer - row id
+GuiTextListCtrl.getselectedids() - returns object - array of row ids
+GuiTextListCtrl.getselectedrow() - returns integer - row index
+GuiTextListCtrl.getselectedrows() - returns object - array of row indices
+GuiTextListCtrl.getselectedtext() - returns string
+GuiTextListCtrl.groupsortorder - string
+GuiTextListCtrl.iconheight - integer (read only)
+GuiTextListCtrl.iconwidth - integer (read only)
+GuiTextListCtrl.insertrow(int, int, str) - returns object - the inserted row
+GuiTextListCtrl.isidselected(int) - returns boolean
+GuiTextListCtrl.isrowselected(int) - returns boolean
+GuiTextListCtrl.makevisible(int)
+GuiTextListCtrl.makevisiblebyid(int)
+GuiTextListCtrl.onDblClick(int, str, int) event - double click on a list entry: id, text, row
+GuiTextListCtrl.onDeleteKey(int, str, int) event - delete key pressed for an entry: id, text, row
+GuiTextListCtrl.onIconResized(int, int) event - the size of the icons has been changed: new width and height
+GuiTextListCtrl.onMouseOverCell(int, str, int) event - the mouse is hovering over a list entry: id, text, row
+GuiTextListCtrl.onOpenMenu(int, str, int) event - right-click on a list entry: id, text, row
+GuiTextListCtrl.onSelect(int, str, int) event - a list entry has been selected: id, text, row
+GuiTextListCtrl.removerow(int)
+GuiTextListCtrl.removerowbyid(int)
+GuiTextListCtrl.resizecell - boolean
+GuiTextListCtrl.rowcount() - returns integer
+GuiTextListCtrl.selected - object (read only)
+GuiTextListCtrl.selectedid - integer
+GuiTextListCtrl.selectedrow - integer
+GuiTextListCtrl.seticonsize(int, int)
+GuiTextListCtrl.setrowactivebyid(int, bool)
+GuiTextListCtrl.setrowbyid(int, str)
+GuiTextListCtrl.setselectedbyid(int)
+GuiTextListCtrl.setselectedbyids(str) - set an array of selected row ids; requires allowmultipleselections=true
+GuiTextListCtrl.setselectedbytext(str)
+GuiTextListCtrl.setselectedrow(int)
+GuiTextListCtrl.setselectedrows(str) - set an array of selected row indices; requires allowmultipleselections=true
+GuiTextListCtrl.sort()
+GuiTextListCtrl.sortcolumn - integer
+GuiTextListCtrl.sortmode - string - either "value", "name" or "extension"
+GuiTextListCtrl.sortorder - string
+GuiTextListEntry - object type, parent type is TGraalVar
+GuiTextListEntry.active - boolean
+GuiTextListEntry.extent - string (read only)
+GuiTextListEntry.flickering - boolean - lets the entry automatically show and hide itself in flickertime intervals
+GuiTextListEntry.flickertime - float - says in what interval the entry is shown and hidden, in seconds; works only in combination with flickering=true
+GuiTextListEntry.gettext() - returns string
+GuiTextListEntry.height - integer (read only)
+GuiTextListEntry.hint - string
+GuiTextListEntry.id - integer
+GuiTextListEntry.image - integer
+GuiTextListEntry.position - string (read only)
+GuiTextListEntry.profile - object
+GuiTextListEntry.selectedimage - integer
+GuiTextListEntry.settext(str)
+GuiTextListEntry.sortgroup - integer
+GuiTextListEntry.sortvalue - integer
+GuiTextListEntry.text - string
+GuiTextListEntry.useownprofile - boolean
+GuiTextListEntry.width - integer (read only)
+GuiTextListEntry.x - integer (read only)
+GuiTextListEntry.y - integer (read only)
+GuiTilesCtrl - object type, parent type is GuiControl
+GuiTilesCtrl.camerabounds - string
+GuiTilesCtrl.cameraposition - string
+GuiTilesCtrl.camerasize - string
+GuiTilesCtrl.loadtilemap(str, str) - returns object
+GuiTilesCtrl.loadtilemapxml(str) - returns object
+GuiTilesCtrl.tilemap - object (read only)
+GuiTreeViewCtrl - object type, parent type is GuiArrayCtrl
+GuiTreeViewCtrl.addlines(obj, bool)
+GuiTreeViewCtrl.addnode(str) - returns object
+GuiTreeViewCtrl.addnodebypath(str, str) - returns object
+GuiTreeViewCtrl.addvars(obj, bool)
+GuiTreeViewCtrl.boxwidth - integer
+GuiTreeViewCtrl.clearnodes()
+GuiTreeViewCtrl.clearrows() - same as clearNodes()
+GuiTreeViewCtrl.clipcolumntext - boolean
+GuiTreeViewCtrl.columns - string - of format "0 16", offset of the tabulators
+GuiTreeViewCtrl.destroy()
+GuiTreeViewCtrl.expanded - boolean
+GuiTreeViewCtrl.expandedimage - integer
+GuiTreeViewCtrl.expandedselectedimage - integer
+GuiTreeViewCtrl.expandondoubleclick - boolean
+GuiTreeViewCtrl.extent - string (read only)
+GuiTreeViewCtrl.firstlinevisible - boolean
+GuiTreeViewCtrl.fitparentwidth - boolean
+GuiTreeViewCtrl.getfullname(str) - returns string
+GuiTreeViewCtrl.getnode(str) - returns object
+GuiTreeViewCtrl.getnodeat(int, int) - returns object
+GuiTreeViewCtrl.getnodebypath(str, str) - returns object
+GuiTreeViewCtrl.getselectednode() - returns object
+GuiTreeViewCtrl.groupsortorder - string
+GuiTreeViewCtrl.height - integer (read only)
+GuiTreeViewCtrl.hint - string
+GuiTreeViewCtrl.image - integer
+GuiTreeViewCtrl.level - integer (read only)
+GuiTreeViewCtrl.name - string - same as 'text'
+GuiTreeViewCtrl.nodes - object (read only)
+GuiTreeViewCtrl.onDblClick(obj, str, str) event - double-click on a node: node object, slash-path, dot-path
+GuiTreeViewCtrl.onExpand(obj, str, str) event - a node is expanding: node object, slash-path, dot-path
+GuiTreeViewCtrl.onFold(obj, str, str) event - a node is folded: node object: slash-path, dot-path
+GuiTreeViewCtrl.onIconResized(int, int) event - the size of the icons has been changed: new width and height
+GuiTreeViewCtrl.onMouseOverCell(obj, str, str) event - the mouse is hovering over a node: node object, slash-path, dot-path
+GuiTreeViewCtrl.onOpenMenu(obj, str, str) event - right click on a node: node object, slash-path, dot-path
+GuiTreeViewCtrl.onSelect(obj, str, str) event - a node is selected: node object, slash-path, dot-path
+GuiTreeViewCtrl.parent - object (read only)
+GuiTreeViewCtrl.position - string (read only)
+GuiTreeViewCtrl.profile - object
+GuiTreeViewCtrl.select()
+GuiTreeViewCtrl.selectedimage - integer
+GuiTreeViewCtrl.seticonsize(int, int)
+GuiTreeViewCtrl.sort()
+GuiTreeViewCtrl.sortgroup - integer
+GuiTreeViewCtrl.sortmode - string - either "value", "name" or "extension"
+GuiTreeViewCtrl.sortorder - string
+GuiTreeViewCtrl.sortvalue - integer
+GuiTreeViewCtrl.statuswidth - integer
+GuiTreeViewCtrl.text - string
+GuiTreeViewCtrl.useownprofile - boolean
+GuiTreeViewCtrl.visible - boolean
+GuiTreeViewCtrl.width - integer (read only)
+GuiTreeViewNode - object type, parent type is TGraalVar
+GuiTreeViewNode.addlines(obj, bool)
+GuiTreeViewNode.addnode(str) - returns object
+GuiTreeViewNode.addnodebypath(str, str) - returns object
+GuiTreeViewNode.addvars(obj, bool)
+GuiTreeViewNode.clearnodes()
+GuiTreeViewNode.destroy()
+GuiTreeViewNode.expanded - boolean
+GuiTreeViewNode.expandedimage - integer
+GuiTreeViewNode.expandedselectedimage - integer
+GuiTreeViewNode.extent - string (read only)
+GuiTreeViewNode.getfullname(str) - returns string
+GuiTreeViewNode.getnode(str) - returns object
+GuiTreeViewNode.getnodebypath(str, str) - returns object
+GuiTreeViewNode.height - integer (read only)
+GuiTreeViewNode.hint - string
+GuiTreeViewNode.image - integer
+GuiTreeViewNode.level - integer (read only)
+GuiTreeViewNode.name - string - same as 'text'
+GuiTreeViewNode.parent - object (read only)
+GuiTreeViewNode.position - string (read only)
+GuiTreeViewNode.profile - object
+GuiTreeViewNode.select()
+GuiTreeViewNode.selectedimage - integer
+GuiTreeViewNode.sortgroup - integer
+GuiTreeViewNode.sortvalue - integer
+GuiTreeViewNode.text - string
+GuiTreeViewNode.useownprofile - boolean
+GuiTreeViewNode.visible - boolean
+GuiTreeViewNode.width - integer (read only)
+GuiTreeViewNode.x - integer (read only)
+GuiTreeViewNode.y - integer (read only)
+GuiWindowCtrl - object type, parent type is GuiTextCtrl
+GuiWindowCtrl.canclose - boolean
+GuiWindowCtrl.canmaximize - boolean
+GuiWindowCtrl.canminimize - boolean
+GuiWindowCtrl.clientrelative - boolean - by default false; if enabled then sub-controls are positioned automatically to not overlap the header or the borders; use clientwidth and clientheight to get the available space for sub-controls
+GuiWindowCtrl.closequery - boolean
+GuiWindowCtrl.destroyonhide - boolean
+GuiWindowCtrl.dockable - boolean
+GuiWindowCtrl.extent - string
+GuiWindowCtrl.externalwindow - object (read only) - the external window object, can be used to manipulate the OS window
+GuiWindowCtrl.isactivewindow() - returns boolean - checks if the window is active (the top window)
+GuiWindowCtrl.isexternal - boolean
+GuiWindowCtrl.maximized - boolean
+GuiWindowCtrl.minimized - boolean
+GuiWindowCtrl.onCloseQuery() event - the player clicked on the close button and closequery=true
+GuiWindowCtrl.onTextChanged(str) event - the window title has been changed
+GuiWindowCtrl.tile - boolean
+hideplayer(float)
+hidesword(float)
+hitnpc(int, float, float, float)
+hitplayer(int, float, float, float)
+installedlanguages - string (read only)
+isadminguild(str) - returns boolean
+isapplicationactive - boolean (read only)
+iscarrying - boolean (read only)
+isclassloaded(str) - returns boolean
+iscursoron() - returns boolean
+isdemoversion() - returns boolean
+isdownloading(str) - returns boolean - checks if a file is currently downloaded or requested from the server
+isdownloadingfiles() - returns boolean - checks if the game is currently downloading or requesting files from the server
+isfocused - boolean (read only)
+isfullscreenmode() - returns boolean
+isgraalplugin - boolean (read only)
+isimgpixeltransparent(str, int, int) - returns boolean
+isimgrectangletransparent(str, int, int, int, int) - returns boolean
+isleader - boolean (read only)
+ismusicplaying() - returns boolean
+isofflinemode() - returns boolean - says if the game is running in offline mode (only for special packaged games)
+isonmap - boolean (read only)
+isopengl - boolean (read only)
+ispremiumversion() - returns boolean
+isrecordingvideo - boolean (read only)
+issoundplaying(str) - returns boolean - returns if a sound with the specified filename is playing
+isstreamingvideo - string (read only)
+Key - object type, parent type is TStaticVar
+Key.addlistener(obj)
+Key.backspace - integer (read only)
+Key.capslock - integer (read only)
+Key.control - integer (read only)
+Key.deletekey - integer (read only)
+Key.down - integer (read only)
+Key.end - integer (read only)
+Key.enter - integer (read only)
+Key.escape - integer (read only)
+Key.getascii() - returns integer
+Key.getcode() - returns integer
+Key.home - integer (read only)
+Key.insert - integer (read only)
+Key.isaccessible() - returns boolean
+Key.isdown(int) - returns boolean
+Key.istoggled(int) - returns boolean
+Key.left - integer (read only)
+Key.pgdn - integer (read only)
+Key.pgup - integer (read only)
+Key.removelistener(obj) - returns boolean
+Key.right - integer (read only)
+Key.shift - integer (read only)
+Key.space - integer (read only)
+Key.tab - integer (read only)
+Key.up - integer (read only)
+keydown(int) - returns boolean
+keydown2(int, bool) - returns boolean
+keydown2global(int, bool) - returns boolean
+keydownglobal(int) - returns boolean
+keyname(int) - returns string - returns the name of a default action key (0-11)
+keyname2(int) - returns string - returns the name of a key, parameter is the keycode
+lastdownloadfile - string (read only)
+lay2(str, float, float)
+leftmousebutton - boolean (read only)
+leftmousebuttonglobal - boolean (read only)
+levelorgx - float (read only)
+levelorgy - float (read only)
+lighteffectsenabled - boolean
+loadclass(str) - preloads the clientside script of a class
+loadingscreenenabled - boolean - must be disabled by script starting with v5.226
+loadmap(str)
+loadtranslation(str)
+makescreenshot2(str, int, float, float, float, int, int) - makes a screenshot without gui, parameters are filename, render bit flags (1 (local player) + 2 (other players) + 4 (npcs) + 8 (particles from removed objects) + 0x10 (weapon showimgs) + 0x20 (daynight effect), or 0x3f for everything), levelx, levely, levelz, pixelwidth and pixelheight
+makescreenshotfull(str, int, int) - makes a screenshot including gui and saves under the specified filename and width and height, pass values of -1 for width and height if you want to use the screen size
+makescreenshotgame(str, int, int, int) - makes a screenshot without gui, parameters are filename, render bit flags (1 (local player) + 2 (other players) + 4 (npcs) + 8 (particles from removed objects) + 0x10 (weapon showimgs) + 0x20 (daynight effect), or 0x3f for everything), pixelwidth and pixelheight; this is making a screenshot at the player position, see makescreenshot2() if you want to change the offset
+Math - object type, parent type is TStaticVar
+Math.abs(float) - returns float
+Math.atan(float) - returns float
+Math.atan2(float, float) - returns float
+Math.ceil(float) - returns float
+Math.cos(float) - returns float
+Math.floor(float) - returns integer
+Math.log(float) - returns float
+Math.max(float, float) - returns float
+Math.min(float, float) - returns float
+Math.pi - float (read only)
+Math.pow(float, float) - returns float
+Math.random() - returns float
+Math.round(float) - returns float
+Math.sin(float) - returns float
+Math.sqrt(float) - returns float
+Math.sqrt1_2 - float (read only)
+Math.sqrt2 - float (read only)
+Math.tan(float) - returns float
+md5(str) - returns string
+middlemousebutton - boolean (read only)
+middlemousebuttonglobal - boolean (read only)
+mousebuttons - integer (read only)
+mousebuttonsglobal - integer (read only)
+mousescreenx - integer
+mousescreeny - integer
+mousewheeldelta - integer (read only)
+mousex - float
+mousey - float
+MovieClip - object type, parent type is TGraalVar
+MovieClip._level0 - object (read only)
+MovieClip._name - string (read only)
+MovieClip._parent - object (read only)
+MovieClip._root - object (read only)
+MovieClip._rotation - float
+MovieClip._visible - boolean
+MovieClip._x - float
+MovieClip._xmouse - float (read only)
+MovieClip._xscale - float
+MovieClip._y - float
+MovieClip._ymouse - float (read only)
+MovieClip._yscale - float
+MovieClip.alpha - float
+MovieClip.attachmovie(params...) - returns object - parameters are the movie clip to copy, the name of the new clip, and the layer
+MovieClip.blue - float
+MovieClip.clearinterval(obj)
+MovieClip.createemptymovieclip(str, int) - returns object - parameters are the the name of the new clip and the layer
+MovieClip.duplicatemovieclip(params...) - returns object
+MovieClip.frame - integer
+MovieClip.framecount - integer (read only)
+MovieClip.getbounds(obj) - returns object
+MovieClip.getbytesloaded() - returns integer
+MovieClip.getbytestotal() - returns integer
+MovieClip.getcolor() - returns string
+MovieClip.getdepth() - returns integer
+MovieClip.getinstanceatdepth(int) - returns object
+MovieClip.getlayer(str) - returns object
+MovieClip.getnexthighestdepth() - returns integer
+MovieClip.getproperty(int) - returns string
+MovieClip.gettimer() - returns integer
+MovieClip.globaltolocal(obj)
+MovieClip.gotoandplay(params...) - specify the frame name or frame number
+MovieClip.gotoandstop(params...) - specify the frame name or frame number
+MovieClip.green - float
+MovieClip.height - float (read only)
+MovieClip.hittest(params...) - returns boolean
+MovieClip.key - object (read only)
+MovieClip.layerdepths - object (read only)
+MovieClip.layernames - object (read only)
+MovieClip.localtoglobal(obj)
+MovieClip.looping - boolean
+MovieClip.math - object (read only)
+MovieClip.nextframe()
+MovieClip.objectname - string
+MovieClip.objectnames - object (read only)
+MovieClip.onEnterFrame() event - frame tick
+MovieClip.onInitFrame() event - the movie clip switched to a new frame
+MovieClip.onKeyDown() event - a key has been pressed
+MovieClip.onKeyUp() event - a key has been released
+MovieClip.onMouseDown() event - mouse click
+MovieClip.onMouseMove() event - mouse moved
+MovieClip.onMouseUp() event - mouse button released
+MovieClip.onPress() event - mouse click on a button clip
+MovieClip.onRelease() event - mouse button released on a button clip
+MovieClip.playing - boolean
+MovieClip.prevframe()
+MovieClip.removelayer(str)
+MovieClip.removemovieclip()
+MovieClip.setcolor(str)
+MovieClip.setinterval(obj, str, int) - returns object
+MovieClip.setmask(obj)
+MovieClip.setproperty(int, str)
+MovieClip.stage - object (read only)
+MovieClip.startdrag()
+MovieClip.stop()
+MovieClip.stopdrag()
+MovieClip.swapdepths(str)
+MovieClip.unloadmovie() - same as removeMovieClip()
+MovieClip.updateafterevent()
+MovieClip.width - float (read only)
+MRandomGenerator - object type, parent type is TGraalVar
+MRandomGenerator.destroy()
+musiclen - float (read only)
+musicpos - float (read only)
+newrc,2015.10.31
+noplayerkilling()
+onClassLoaded(str) event - a class script has been updated: name of the class
+onConnectingToServer(str, str, int) event - connecting to: servername, address, port
+onControlKeyDown(int, str, int, str) event - a control key (VK_ESCAPE, VK_F1 etc.) has been pressed, parameters are keycode, keytext, scancode, external window name
+onControlKeyUp(int, str, int, str) event - a control key (VK_ESCAPE, VK_F1 etc.) has been released, parameters are keycode, keytext, scancode, external window name
+onDefaultStyleChanges(str) event - the $pref::Video::defaultguistyle has been changed
+onFileChunkReceived(str, int, int) event - file download progress: filename, current position, full size
+onFilesUploaded() event - finished uploading all files to the file browser
+onFirstResponderChanges(obj) event - the control that received the keyboard input changed
+onFolderLog(str) event - scripted RC file browser message
+onMapClick(obj) event - clicked on a player on the map: player object
+onMouseYawPitch(int, int) event - the mouse moved in 3D mode: yaw and pitch
+onOpenHelpWindow() event - the key for opening the help window (F1) has been pressed
+onOpenLogWindow() event - the key for opening the log window (F2) has been pressed
+onOpenOptionsWindow() event - the key for opening the options window (F3) has been pressed
+onOpenPlayerList() event - the key for opening the player list (F7) has been pressed
+onOpenPlayerPositionWindow() event - the key for opening the positon window (F5) has been pressed
+onOpenProfileWindow(obj) event - right click on a player or call to showProfile() to open the profile window
+onOpenServerList() event - the key for opening the serverlist (F8) has been pressed
+onPackagesDownloadComplete() event - all update packages (.gupd files) have been downloaded
+onPackagesDownloaded() event - some update packages (.gupd files) have been downloaded
+onPlayerChanges(obj, int) event - the look of a player changed: player object and id
+onPlayerLanguageChanges(obj, str) event - the language of the player has changed: player object, new language
+onPlayerLogin(obj, int) event - a player logged in: player object and id
+onPlayerLogout(obj, int) event - a player logged out: player object (might be NULL) and id
+onPM(obj) event - received a PM from a player: player object
+onRCChat(str) event - scripted RC chat: text
+onRemotePlayerChats(obj, str) event - another player is saying something: player object, text
+onSelectedFileForUpload(str) event - selected a file, call uploadfile(filename)
+onServerListerConnect() event - a connection to the server-lister (central server) established
+onServerLogin() event - logged into a server
+onToall(obj, str) event - received a toall message: player object and message
+onTranslationUpdated(str) event - a translation file (.po) has been updated
+onUpdatePackageDownloaded(obj) event - downloaded an update package (.gupd): package object
+onwall(float, float) - returns boolean
+onwall2(float, float, float, float) - returns boolean
+onwater(float, float) - returns boolean
+onwater2(float, float, float, float) - returns boolean
+opengraalurl(str)
+openurl(str)
+openurl2(str, int, int)
+particleeffectsenabled - boolean
+play(str) - plays a sound file at the player position
+play2(str, float, float, float) - parameters are sound file, x, y and volume (0..1)
+playlooped(str)
+playlooped2(str, float, float, float) - plays a sound file looped at x, y and volume (0..1)
+popdialog()
+preloadanimation(str) - loads graphics used by an animation and keeps them in memory until a script calls freeAllResources()
+pushdialog(obj)
+putleaps(int, float, float)
+RC Detection: RC3 (2015.10.31)
+removetiledefs(str)
+replaceani(str, str)
+requesthttp(str, int, str) - returns object
+requesttext(str, str)
+requesturl(str) - returns object
+resetfocus()
+rightmousebutton - boolean (read only)
+rightmousebuttonglobal - boolean (read only)
+screenheight - integer (read only)
+screenpixelscale - float (read only)
+screenwidth - integer (read only)
+screenx(float, float) - returns integer
+screeny(float, float) - returns integer
+scriptedcontrols - boolean (read only)
+scriptedplayerlist - boolean (read only)
+scriptlogwritetoreadonly - boolean
+selectedlistplayers - object
+selectedsword - integer
+selectedweapon - integer
+selectfilefordownload(str) - opens the select-file-dialog for the download location of files (from scripted RC)
+selectfileforupload() - opens the select-file-dialog for uploading of files (into scripted RC)
+sendtext(str, str, params...)
+servername - string (read only)
+serverstartconnect - string
+serverstartparams - string
+serverwarp(str)
+setcontentcontrol(obj) - replaces the main GUI control
+setcursor2(str)
+seteffect(float, float, float, float)
+setfocus(float, float)
+setletters(str)
+setminimap(str, str, float, float) - parameters are a text file with level names, the image, default x and y; use gmaps if possible instead of this
+setmusicvolume(float, float)
+setplayerdir(str)
+setsoundpitch(str, float) - sets the pitch of a sound effect, parameters are filename and pitch, good for looping car sounds, default is 1, good values are between 0.5 and 1.5
+setsoundpitchbynote(str, str, str) - sets the pitch of a sound depending on base note (e.g. cn1) and the note you want to hear (e.g. an1), notes are an0, as1, bn0, cn0, cs0, dn0, ds0, en0, fn0, fs1, gn0, fs1, an1 etc.
+setspritesimage(str)
+setstatusimage(str)
+setstreamingmode(str) - returns boolean
+shotbybaddy - boolean (read only)
+shotbyplayer - boolean (read only)
+showstats(int)
+showterraingrid - boolean
+Sound - object type, parent type is TStaticVar
+Sound.sound(params...) - returns object
+spritesimage - string
+spyfire(int, int)
+Stage - object type, parent type is TGraalVar
+Stage.height - float (read only)
+Stage.stage(params...) - returns object
+Stage.width - float (read only)
+startrecordvideo() - returns boolean
+statusimage - string
+stopmidi() - same as stopmusic(), kept for compatibility
+stopmusic()
+stoprecordvideo() - returns boolean
+stopsound(str) - stops a sound effect
+stopsounds(bool) - stops all sound effects, as parameter specify if also looping sounds should be stopped
+String.string(params...) - returns object
+supportsopenglshader() - returns boolean
+switchtodirectx()
+switchtoopengl()
+takeplayercarry()
+takeplayerhorse()
+TBaddy - object type, parent type is TDrawableObject
+TBaddy.dir - integer
+TBaddy.headdir - integer
+TBaddy.mode - integer
+TBaddy.power - integer
+TBaddy.type - integer
+TBaddy.x - float
+TBaddy.y - float
+TCallStackEntry - object type, parent type is TGraalVar
+TControlBinding - object type, parent type is TGraalVar
+TControlBinding.action - integer (read only)
+TControlBinding.keycode - integer (read only)
+TControlBinding.keytext - string (read only)
+TControlBinding.slot - integer (read only)
+TDoubleArrayVar - object type, parent type is TGraalVar
+TDrawableObject - object type, parent type is TGraalVar
+TDrawableObject.layer - integer (read only)
+TDrawingPanel - object type, parent type is TGraalVar
+TDrawingPanel.drawobject(int, int, obj) - destination x and y, object to draw (e.g. player)
+TDrawingPanel.saveimage(str)
+testplayer(float, float) - returns integer
+TExplosion - object type, parent type is TLevelObject
+TExplosion.dir - integer (read only)
+TExplosion.power - integer (read only)
+TExplosion.time - float (read only)
+TFrameDetail - object type, parent type is TGraalVar
+TFrameDetail.bordercolor - string
+TFrameDetail.borderenable - string
+TFrameDetail.bordermovable - string
+TFrameDetail.borderwidth - integer
+TFrameDetail.minextent - string
+TGaniObject - object type, parent type is TLevelObject
+TGaniObject.alpha - float
+TGaniObject.ani - object
+TGaniObject.anistep - integer (read only)
+TGaniObject.attachedtoobject - object (read only)
+TGaniObject.attachid - integer (read only)
+TGaniObject.attachtype - integer (read only)
+TGaniObject.blue - float
+TGaniObject.body - string
+TGaniObject.bodyimg - string
+TGaniObject.dir - integer
+TGaniObject.getimageforsprite(obj) - returns string
+TGaniObject.getsprite(str) - returns object
+TGaniObject.getspriteforspritepos(obj) - returns object
+TGaniObject.gmap - object (read only)
+TGaniObject.green - float
+TGaniObject.head - string
+TGaniObject.headimg - string
+TGaniObject.mode - integer - the object drawing mode (0 - add, 1 - transparent, 2 - subtract, 3 - daynight)
+TGaniObject.red - float
+TGaniObject.rotation - float
+TGaniObject.rotationcenter - string - the current rotation center (only works when useowncenter=true)
+TGaniObject.setcoloreffect(float, float, float, float)
+TGaniObject.seteffectmode(int)
+TGaniObject.shield - string
+TGaniObject.sprite - integer
+TGaniObject.stretchx - float
+TGaniObject.stretchy - float
+TGaniObject.sword - string
+TGaniObject.useowncenter - boolean - by default the object is rotated around the image center, set this to true and set rotationcenter for custom rotations
+TGaniObject.zoom - float
+TGaniParam - object type, parent type is TGraalVar
+TGraalAni - object type, parent type is TGraalVar
+TGraalAni.addsprite(int) - returns object
+TGraalAni.addstep() - returns object
+TGraalAni.continuous - boolean
+TGraalAni.deletesprite(int)
+TGraalAni.deletestep(int)
+TGraalAni.ganitype - string (read only)
+TGraalAni.getsprite(int) - returns object
+TGraalAni.insertstep(int) - returns object
+TGraalAni.loop - boolean
+TGraalAni.movie - boolean
+TGraalAni.setbackto - string
+TGraalAni.singledirection - boolean
+TGraalAniPart - object type, parent type is TGraalVar
+TGraalAniPart.attr - integer
+TGraalAniPart.dx - integer
+TGraalAniPart.dy - integer
+TGraalAniPart.param - integer
+TGraalAniPart.sprite - object
+TGraalAniSound - object type, parent type is TGraalVar
+TGraalAniSound.delay - float
+TGraalAniSound.dx - float
+TGraalAniSound.dy - float
+TGraalAniSound.sound - string
+TGraalAniSprite - object type, parent type is TGraalVar
+TGraalAniSprite.addattachment() - returns object
+TGraalAniSprite.alpha - float
+TGraalAniSprite.blue - float
+TGraalAniSprite.deleteattachment(int)
+TGraalAniSprite.description - string
+TGraalAniSprite.green - float
+TGraalAniSprite.height - integer
+TGraalAniSprite.image - string
+TGraalAniSprite.imagetype - string (read only)
+TGraalAniSprite.insertattachment(int) - returns object
+TGraalAniSprite.mode - integer
+TGraalAniSprite.red - float
+TGraalAniSprite.rotation - float
+TGraalAniSprite.spriteindex - integer
+TGraalAniSprite.stretchx - float
+TGraalAniSprite.stretchy - float
+TGraalAniSprite.width - integer
+TGraalAniSprite.x - integer
+TGraalAniSprite.y - integer
+TGraalAniSprite.zoom - float
+TGraalAniStep - object type, parent type is TGraalVar
+TGraalAniStep.addpos(int) - returns object
+TGraalAniStep.delay - float
+TGraalAniStep.deletepos(int, int)
+TGraalAniStep.insertpos(int, int) - returns object
+TGraalClientVar - object type, parent type is TGraalVar
+TGraalSpriteAttachment - object type, parent type is TGraalVar
+TGraalSpriteAttachment.behind - boolean
+TGraalSpriteAttachment.dx - integer
+TGraalSpriteAttachment.dy - integer
+TGraalSpriteAttachment.sprite - object
+TGraalVar.split(str) - returns object - for ActionScript compatibility only: use tokenize() instead
+TGUIAnimation - object type, parent type is TGraalVar
+TGUIAnimation.amplitude - float - amplitude for moveupdown, moveleftright and zoominout
+TGUIAnimation.currenttime - float
+TGUIAnimation.delay - float - the animation starts after the specified number of seconds
+TGUIAnimation.duration - float - the animation will last the specified number of seconds
+TGUIAnimation.interval - float - interval for moveupdown, moveleftright and zoominout
+TGUIAnimation.tabfirstonshow - boolean - calls tabfirst() after showing the control, by default true
+TGUIAnimation.timing - string - timing function: 'linear' or 'sinus', sinus is only used for moveupdown, moveleftright and zoominout
+TGUIAnimation.transition - string - specifies the animation type: fadeout, fadein, moveoutleft, moveinleft, moveoutright, moveinright, moveouttop, moveintop, moveoutbottom, moveinbottom, moveupdown, moveleftright, flipoutleft, flipinleft, flipoutright, flipinright, zoomin, zoomout, zoominout, growin, growout, shrinkin, shrinkout, rotateoutleft, rotateinleft, rotateoutright, rotateinright
+THTTPRequest - object type, parent type is TGraalVar
+TLevelObject - object type, parent type is TDrawableObject
+TLevelObject.level - object (read only)
+TLevelObject.x - float
+TLevelObject.y - float
+TLevelObject.z - float
+TNetService - object type, parent type is TStaticVar
+TNetService.host - string (read only)
+TNetService.interface - integer (read only)
+TNetService.onNameCollision() event - the name has already been used on the network
+TNetService.port - integer (read only)
+TNetService.protocol - string (read only)
+TNetService.publish(obj, str, str, str) - returns boolean - publishes a service over bonjour/zeroconf, parameters are a TSocket, type, domain, name
+TNetService.servicedomain - string (read only)
+TNetService.servicename - string (read only)
+TNetService.servicetype - string (read only)
+TNetService.unpublish() - un-publishes a previously publish()ed service; this is automatically done when destroy()ing the service
+TNetServiceBrowser - object type, parent type is TStaticVar
+TNetServiceBrowser.findservice(str) - returns object - gets the main service associated with the provided name
+TNetServiceBrowser.onNewInterface(obj) event - an alternative interface for a service has been discovered (e.g. ipv6)
+TNetServiceBrowser.onNewService(obj) event - a new service has been discovered
+TNetServiceBrowser.onRemoveService(str, str, str) event - a service has been removed (name, type, domain)
+TNetServiceBrowser.search(str, str) - returns boolean - searches for TNetServices of the given id and domain
+TParticleEmitter - object type, parent type is TGraalVar
+TParticleEmitter.addemitmodifier(str, float, float, str, str, float, float) - returns object
+TParticleEmitter.addglobalmodifier(str, float, float, str, str, float, float) - returns object
+TParticleEmitter.addlocalmodifier(str, float, float, str, str, float, float) - returns object
+TParticleEmitter.advancetime(float)
+TParticleEmitter.attachposition - boolean
+TParticleEmitter.autorotation - boolean
+TParticleEmitter.checkbelowterrain - boolean
+TParticleEmitter.clippingbox - string
+TParticleEmitter.cliptoscreen - boolean
+TParticleEmitter.continueafterdestroy - boolean
+TParticleEmitter.currentparticlecount - integer (read only)
+TParticleEmitter.delaymax - float
+TParticleEmitter.delaymin - float
+TParticleEmitter.dropemitter - object (read only)
+TParticleEmitter.dropwateremitter - object (read only)
+TParticleEmitter.emissionoffset - string
+TParticleEmitter.emit()
+TParticleEmitter.emitat(str)
+TParticleEmitter.emitatterrainheight - boolean
+TParticleEmitter.emitautomatically - boolean
+TParticleEmitter.emittedparticles - integer (read only)
+TParticleEmitter.firstinfront - boolean
+TParticleEmitter.forceaboveterrain - boolean
+TParticleEmitter.isfrozen - boolean
+TParticleEmitter.maxparticles - integer
+TParticleEmitter.movementfactor - float
+TParticleEmitter.noclipping - boolean - if set to true it will disable any clipping to screen or clipping box
+TParticleEmitter.nrofparticles - integer
+TParticleEmitter.particle - object (read only)
+TParticleEmitter.particletypes - integer
+TParticleEmitter.removemodifiers()
+TParticleEmitter.removeparticles()
+TParticleEmitter.showonground - boolean - show the particles parallel to the ground, only for 3D particles
+TParticleEmitter.showontop - boolean - show the particles on top of any 3d object, only for 3D particles
+TParticleEmitter.switchyandzaxis - boolean - switches y and z axis when drawing, only for 3D particles
+TParticleEmitter.wraptoclippingbox - boolean
+TParticleModifier - object type, parent type is TGraalVar
+TParticleModifier.addmod(str, str, float, float)
+TPlayer - object type, parent type is TServerPlayer
+TPlayer.alliedguilds - string - list of guilds which don't hurt the player
+TPlayer.ap - integer
+TPlayer.camerasize - string - camera size when using the new tile maps
+TPlayer.chat - string
+TPlayer.defaultwalkspeed - float - specifies the speed of the default movement (by default 0.5)
+TPlayer.diagonalwalkspeed - float - diagonal movement speed factor, default 1.0, set to 0.5^0.5 to make the player move in the same speed diagonally as horizontally and vertically
+TPlayer.freezetime - float
+TPlayer.getnohit(str) - returns integer - checks if the player can be hurt, returns an error code
+TPlayer.hearts - float
+TPlayer.horseimg - string
+TPlayer.hp - float
+TPlayer.hurt - boolean (read only)
+TPlayer.hurtdx - float (read only)
+TPlayer.hurtdy - float (read only)
+TPlayer.hurted - boolean (read only)
+TPlayer.hurtpower - float (read only)
+TPlayer.isfemale - boolean (read only)
+TPlayer.isjumping - boolean (read only)
+TPlayer.ismale - boolean (read only)
+TPlayer.isobserver - boolean (read only)
+TPlayer.letters - string
+TPlayer.map - boolean (read only)
+TPlayer.nick - string (read only)
+TPlayer.onhorse - boolean (read only)
+TPlayer.online - boolean (read only)
+TPlayer.paused - boolean (read only)
+TPlayer.playerlisticon - integer
+TPlayer.reading - boolean (read only)
+TPlayer.shield - string
+TPlayer.shieldimg - string - same as 'shield'
+TPlayer.showemoticon(str) - shows an emoticon file
+TPlayer.showemoticonbykey(int) - shows an emoticon depending on the provided key (VK_A or getascii('a'))
+TPlayer.sprite - integer
+TPlayer.swimming - boolean (read only)
+TPlayer.sword - string
+TPlayer.swordimg - string - same as 'sword'
+TPlayer.tilemap - object (read only) - the current tile map when using new tile maps
+TPlayer.weapon - object (read only)
+TPlayer.weapons - object (read only)
+TPlayer.zoomfactor - float - the zoom factor set by Alt+8/9
+TProjectile - object type, parent type is TGaniObject
+TProjectile.fromplayer - object (read only)
+TProjectile.fromplayerid - integer (read only)
+TProjectile.params - object (read only)
+triggeraction(float, float, str, params...)
+triggerserver(str, str)
+TRTMPClient - object type, parent type is TSocket
+TRTMPClient.call(int, int, params...)
+TRTMPClient.createstream(int) - returns object
+TRTMPClient.getstream(int) - returns object
+TRTMPClient.onCall(int, int, params...) event - remote call by the client: channel id, stream id, parameters
+TRTMPClient.onGeneratedThumbnail(obj, str) event - a video thumbnail has been generated for a stream: stream object and filename
+TRTMPClient.onHandShake() event - the other side has sent the connection handshake
+TRTMPClient.sendhandshake()
+TRTMPClient.sendinitialping()
+TRTMPStream - object type, parent type is TGraalVar
+TRTMPStream.channelid - integer
+TRTMPStream.destroy()
+TRTMPStream.file - string
+TRTMPStream.mode - string
+TRTMPStream.recordfile - string
+TRTMPStream.streamid - integer (read only)
+TRTMPStream.thumbnailfile - string
+TScriptFunction - object type, parent type is TGraalVar
+TServerBomb - object type, parent type is TLevelObject
+TServerBomb.image - string
+TServerBomb.power - integer
+TServerBomb.time - float
+TServerCarry - object type, parent type is TLevelObject
+TServerChest - object type, parent type is TLevelObject
+TServerChest.isopen - boolean (read only)
+TServerChest.item - string (read only)
+TServerExtra - object type, parent type is TLevelObject
+TServerExtra.time - float (read only)
+TServerExtra.type - integer (read only)
+TServerFlying - object type, parent type is TLevelObject
+TServerFlying.dir - integer (read only)
+TServerFlying.dx - float
+TServerFlying.dy - float
+TServerFlying.from - integer (read only)
+TServerFlying.type - integer (read only)
+TServerHorse - object type, parent type is TGaniObject
+TServerHorse.bombpower - integer
+TServerHorse.bombs - integer
+TServerHorse.bushes - integer
+TServerHorse.dir - integer
+TServerHorse.type - integer
+TServerLeap - object type, parent type is TLevelObject
+TServerLevel - object type, parent type is TGraalVar
+TServerLevel.compsdead - boolean (read only)
+TServerLevel.findareanpcs(float, float, float, float) - returns object - returns an array of all npcs at the specified rectangle (x,y,width,height)
+TServerLevel.hitcompu(int, int, float, float)
+TServerLevel.nopkzone - boolean - same like 'isnopkzone'
+TServerLevel.putcomp(str, float, float)
+TServerLevel.puthorse(str, float, float)
+TServerLevel.putnewcomp(str, float, float, str, int)
+TServerLevel.reflectarrow(int)
+TServerLevel.removearrow(int)
+TServerLevel.removebomb(int)
+TServerLevel.removecompus()
+TServerLevel.removeexplo(int)
+TServerLevel.removehorse(int)
+TServerLevel.removeitem(int)
+TServerLevel.setz(int, int, int, int, float, float, float, float)
+TServerLevel.shoot(float, float, float, float, float, float, str, str) - shoots a projectile with x,y,z,angle,zangle,strength,ani,aniparams
+TServerLevel.testbomb(float, float) - returns integer
+TServerLevel.testexplo(float, float) - returns integer
+TServerLevel.testhorse(float, float) - returns integer
+TServerLevel.testitem(float, float) - returns integer
+TServerLevel.testsign(float, float) - returns integer
+TServerLevelLink - object type, parent type is TGraalVar
+TServerLevelLink.destlevel - string (read only)
+TServerLevelLink.destx - float (read only)
+TServerLevelLink.desty - float (read only)
+TServerLevelLink.height - float (read only)
+TServerLevelLink.width - float (read only)
+TServerLevelLink.x - float (read only)
+TServerLevelLink.y - float (read only)
+TServerNPC.actionplayer - integer (read only)
+TServerNPC.blockagainlocal()
+TServerNPC.carryobject(str)
+TServerNPC.dontblocklocal()
+TServerNPC.hideimgs(int, int) - hides images from startindex to endindex (including the endindex)
+TServerNPC.hidelocal()
+TServerNPC.hp - float
+TServerNPC.hurt(int)
+TServerNPC.peltwithblackstone - boolean (read only)
+TServerNPC.peltwithbush - boolean (read only)
+TServerNPC.peltwithnpc - boolean (read only)
+TServerNPC.peltwithsign - boolean (read only)
+TServerNPC.peltwithstone - boolean (read only)
+TServerNPC.peltwithvase - boolean (read only)
+TServerNPC.setbow(str)
+TServerNPC.setshape(int, int, int)
+TServerNPC.setshape2(int, int, obj)
+TServerNPC.setzoomeffect(float)
+TServerNPC.shootarrow(int)
+TServerNPC.shootball()
+TServerNPC.shootfireball(int)
+TServerNPC.shootfireblast(int)
+TServerNPC.shootnuke(int)
+TServerNPC.showlocal()
+TServerNPC.showpoly(int, obj) - returns object
+TServerNPC.showpoly2(int, obj) - returns object
+TServerNPC.take(str)
+TServerNPC.take2(int)
+TServerNPC.takehorse(int)
+TServerNPC.throwcarry()
+TServerNPC.timereverywhere()
+TServerPlayer.attachedtoobject - object
+TServerPlayer.chatoffset - string - set to {deltax,deltay} if you want to change the position of chat and emoticons for bigger characters; chat only uses deltay
+TServerPlayer.fullhearts - integer (read only)
+TServerPlayer.guild - string (read only)
+TServerPlayer.hearts - float (read only)
+TServerPlayer.horseimg - string (read only)
+TServerPlayer.hp - float (read only)
+TServerPlayer.isbuddy - boolean
+TServerPlayer.ischannel - boolean (read only)
+TServerPlayer.ischannelopen - boolean (read only)
+TServerPlayer.ischanneluser - boolean (read only)
+TServerPlayer.isexternal - boolean (read only)
+TServerPlayer.isfemale - boolean (read only)
+TServerPlayer.isguildpm() - returns boolean
+TServerPlayer.isignored - boolean
+TServerPlayer.isignoring - boolean (read only)
+TServerPlayer.isloggedin - boolean (read only)
+TServerPlayer.ismale - boolean (read only)
+TServerPlayer.ismasspm() - returns boolean
+TServerPlayer.language - string (read only)
+TServerPlayer.languagedomain - string (read only)
+TServerPlayer.levelname - string (read only) - the name of the level where the player is currently in, even if it has not been loaded yet
+TServerPlayer.mapicon - object (read only) - of type TDrawingPanel, this is the icon that appears on the mini-map, usually updated by the playerlist script
+TServerPlayer.maxhp - integer (read only)
+TServerPlayer.messagebubble - integer (read only)
+TServerPlayer.openexternalhistory() - returns boolean
+TServerPlayer.openexternalpm(bool) - returns boolean - as parameter specify 'true' if it should display the pm sent by the player, otherwise always open a blank PM window
+TServerPlayer.playerlisticon - integer (read only)
+TServerPlayer.playersindex - integer (read only)
+TServerPlayer.pmswaiting() - returns boolean
+TServerPlayer.rating - float (read only)
+TServerPlayer.ratingd - float (read only)
+TServerPlayer.rupees - integer - better use 'gralats'
+TServerPlayer.shieldimg - string - only there for compatibility with GS1, use just 'shield' instead
+TServerPlayer.shieldpower - integer (read only)
+TServerPlayer.showprofile()
+TServerPlayer.swordimg - string - only there for compatibility with GS1, use just 'sword' instead
+TServerPlayer.swordpower - integer (read only)
+TServerSign - object type, parent type is TLevelObject
+TServerWeapon - object type, parent type is TServerNPC
+TServerWeapon.isweapon - boolean (read only)
+TShowImg - object type, parent type is TLevelObject
+TShowImg.actor - object (read only)
+TShowImg.alpha - float
+TShowImg.angle - float - particle movement angle
+TShowImg.ani - string
+TShowImg.attachoffset - string
+TShowImg.attachtoowner - boolean
+TShowImg.blue - float
+TShowImg.code - string - the old representation as 'font@style@text'
+TShowImg.dimension - integer
+TShowImg.dir - integer
+TShowImg.emitter - object (read only)
+TShowImg.flashfile - string
+TShowImg.font - string
+TShowImg.green - float
+TShowImg.height - float
+TShowImg.imageindex - integer (read only)
+TShowImg.lifetime - float - particle lifetime
+TShowImg.mode - integer - the image drawing mode (0 - add, 1 - transparent, 2 - subtract, 3 - daynight)
+TShowImg.movementvector - string - particle movement vector (angle + zangle + speed)
+TShowImg.parth - integer
+TShowImg.partw - integer
+TShowImg.partx - integer
+TShowImg.party - integer
+TShowImg.playerlook - boolean - if the animation should take it's head, body, sword, shield and attr[] from the owner (playerlook), set this to false if you want to set the images yourself by changing showimg.actor.head etc.
+TShowImg.polygon - object
+TShowImg.position - string
+TShowImg.rotation - float
+TShowImg.rotationcenter - string - the current rotation center (only works when useowncenter=true)
+TShowImg.shadowcolor - string
+TShowImg.shadowoffset - string
+TShowImg.sound - string - particle sound
+TShowImg.speed - float - particle movement speed
+TShowImg.spin - float
+TShowImg.stretchx - float
+TShowImg.stretchy - float
+TShowImg.style - string
+TShowImg.text - string
+TShowImg.textshadow - boolean
+TShowImg.uniqueparticle - boolean - says if each particle should store it's own data (good for text emitters)
+TShowImg.useowncenter - boolean - by default the showimg is rotated around the image center, set this to true and set rotationcenter for custom rotations
+TShowImg.width - float
+TShowImg.zangle - float - particle movement zangle
+TShowImg.zoom - float
+TSocket.connecttoservice(obj) - connects to a TNetService, use TNetServiceBrowser to discover services
+TTileAnimation - object type, parent type is TGraalVar
+TTileImageMap - object type, parent type is TGraalVar
+TTileLayer - object type, parent type is TTileMapObject
+TTileMapLayer - object type, parent type is TGraalVar
+TTileMapObject - object type, parent type is TGraalVar
+TTilesLayer - object type, parent type is TGraalVar
+TTilesLayer.alpha - float
+TTilesLayer.blue - float
+TTilesLayer.green - float
+TTilesLayer.offset - string
+TTilesLayer.red - float
+TTilesLayer.x - float
+TTilesLayer.y - float
+TTilesLayer.z - float
+TTileSprite - object type, parent type is TTileMapObject
+TUpdatePackage - object type, parent type is TGraalVar
+TUpdatePackage.accounts - object (read only)
+TUpdatePackage.description - string (read only)
+TUpdatePackage.downloadcomplete - boolean (read only)
+TUpdatePackage.downloadedsize - integer (read only)
+TUpdatePackage.filecount - integer (read only)
+TUpdatePackage.filedownloadedsize - integer (read only)
+TUpdatePackage.filename - string (read only)
+TUpdatePackage.filetotalsize - integer (read only)
+TUpdatePackage.isuninstalled - boolean (read only)
+TUpdatePackage.lastdownloadfile - string (read only)
+TUpdatePackage.localversion - float (read only)
+TUpdatePackage.mode - string (read only)
+TUpdatePackage.name - string (read only)
+TUpdatePackage.parent - object (read only)
+TUpdatePackage.platform - string (read only)
+TUpdatePackage.protectoverwrite - boolean (read only)
+TUpdatePackage.reinstall() - returns boolean
+TUpdatePackage.totalsize - integer (read only)
+TUpdatePackage.uninstall() - returns boolean
+TUpdatePackage.update() - returns boolean
+TUpdatePackage.usechecksum - boolean (read only)
+TUpdatePackage.version - float (read only)
+TWindow - object type, parent type is TGraalVar
+TWindow.bounds - string - array of {x,y,width,height}, combination of position and extent
+TWindow.extent - string - width and height of the control
+TWindow.height - integer
+TWindow.position - string
+TWindow.screenbounds - string (read only) - array of {x,y,width,height}, position and size of the screen where this window is shown
+TWindow.screenheight - integer (read only) - height of the screen where this window is shown
+TWindow.screenwidth - integer (read only) - width of the screen where this window is shown
+TWindow.width - integer
+TWindow.x - integer
+TWindow.y - integer
+updateboard(int, int, int, int)
+updateterrain()
+uploadfile(str) - uploads a file, you must provide the full path provided by an onDropFiles() event, also this will only work if the scripted RC has currently a file browser window open; once the file is uploaded an onFilesUploaded event will be invoked
+urldecode(str) - returns string
+urlencode(str) - returns string
+wasshooted - boolean (read only)
+watercolorflags - integer - changes the color of the 3d terrain, it's made of bit flags (default is 4):  1 - red highlight, 2 - green highlight, 4 - blue highlight,  8 - red clear, 16 - green clear, 32 - blue clear
+waterheight - float
+weapons - object (read only)
+weaponsenabled - boolean
+weathereffectsenabled - boolean
+worldx(float, float) - returns float
+worldy(float, float) - returns float
+wraptext(int, str, str) - returns object
+wraptext2(int, float, str, str) - returns object

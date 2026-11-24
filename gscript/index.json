@@ -1,0 +1,240 @@
+{
+  "source": "https://github.com/MorenoLand/GScript.GS2Taco",
+  "commit": "b211b601",
+  "documents": [
+    {
+      "id": "graalscript-reference",
+      "file": "docs/GraalScript_Reference.md",
+      "title": "GraalScript Comprehensive Guide for LLMs and Dummies",
+      "summary": "Comprehensive guide to GS1 and GS2: syntax, built-in functions and variables, object properties, GUI controls, examples",
+      "kind": "verified",
+      "verified": true,
+      "bytes": 468868
+    },
+    {
+      "id": "core",
+      "file": "CORE.md",
+      "title": "GS2 Documentation Core Reference",
+      "summary": "The core reference. Read it before anything else.",
+      "kind": "core",
+      "verified": false,
+      "bytes": 30145
+    },
+    {
+      "id": "comments",
+      "file": "basics/comments.md",
+      "title": "Comments",
+      "summary": "Comments",
+      "kind": "basics",
+      "verified": false,
+      "bytes": 1537
+    },
+    {
+      "id": "functions",
+      "file": "basics/functions.md",
+      "title": "Functions",
+      "summary": "Functions",
+      "kind": "basics",
+      "verified": false,
+      "bytes": 6057
+    },
+    {
+      "id": "io",
+      "file": "basics/io.md",
+      "title": "Keyboard and Mouse I/O",
+      "summary": "Keyboard and mouse input",
+      "kind": "basics",
+      "verified": false,
+      "bytes": 7939
+    },
+    {
+      "id": "logic",
+      "file": "basics/logic.md",
+      "title": "Logic",
+      "summary": "Logic and decisions",
+      "kind": "basics",
+      "verified": false,
+      "bytes": 6742
+    },
+    {
+      "id": "math",
+      "file": "basics/math.md",
+      "title": "Math",
+      "summary": "Math",
+      "kind": "basics",
+      "verified": false,
+      "bytes": 8620
+    },
+    {
+      "id": "remote-control",
+      "file": "basics/remote-control.md",
+      "title": "Remote Control (RC)",
+      "summary": "The Remote Control (RC)",
+      "kind": "basics",
+      "verified": false,
+      "bytes": 3052
+    },
+    {
+      "id": "server-client",
+      "file": "basics/server-client.md",
+      "title": "Server-side and Client-side",
+      "summary": "Server-side and client-side code",
+      "kind": "basics",
+      "verified": false,
+      "bytes": 3274
+    },
+    {
+      "id": "strings",
+      "file": "basics/strings.md",
+      "title": "Strings",
+      "summary": "Strings",
+      "kind": "basics",
+      "verified": false,
+      "bytes": 6715
+    },
+    {
+      "id": "timeouts",
+      "file": "basics/timeouts.md",
+      "title": "Timeouts & Looping",
+      "summary": "Timeouts and looping",
+      "kind": "basics",
+      "verified": false,
+      "bytes": 6129
+    },
+    {
+      "id": "variables",
+      "file": "basics/variables.md",
+      "title": "Variables",
+      "summary": "Variables: numbers, text, objects and lists",
+      "kind": "basics",
+      "verified": false,
+      "bytes": 4281
+    },
+    {
+      "id": "adventure-functions",
+      "file": "docs/Adventure_Functions.md",
+      "title": "Adventure functions",
+      "summary": "The Adventure_* functions",
+      "kind": "guide",
+      "verified": false,
+      "bytes": 15245
+    },
+    {
+      "id": "gs2-commands",
+      "file": "docs/GS2_Commands.md",
+      "title": "GS2_Commands",
+      "summary": "GS2 commands",
+      "kind": "guide",
+      "verified": false,
+      "bytes": 37695
+    },
+    {
+      "id": "tclient-documentation",
+      "file": "docs/TClient_Documentation.md",
+      "title": "TClient and StartScript documentation",
+      "summary": "The TClient_* functions, the TClient instance, the data handlers, the login sequences and the StartScript weapons",
+      "kind": "guide",
+      "verified": false,
+      "bytes": 37177
+    },
+    {
+      "id": "advanced-features",
+      "file": "docs/advanced-features.md",
+      "title": "Advanced GS2 Features",
+      "summary": "Advanced GS2 features and constraints",
+      "kind": "guide",
+      "verified": false,
+      "bytes": 8781
+    },
+    {
+      "id": "docu-emitters-1-03",
+      "file": "docs/docu_emitters-1.03.md",
+      "title": "docu_emitters-1.03",
+      "summary": "Emitters on Graal v4+",
+      "kind": "guide",
+      "verified": false,
+      "bytes": 9291
+    },
+    {
+      "id": "events-reference",
+      "file": "docs/events-reference.md",
+      "title": "Events Reference",
+      "summary": "Events the engine calls when conditions or actions occur",
+      "kind": "guide",
+      "verified": false,
+      "bytes": 5659
+    },
+    {
+      "id": "functions-reference",
+      "file": "docs/functions-reference.md",
+      "title": "Functions Reference",
+      "summary": "Reference of GraalScript2 functions and variables",
+      "kind": "guide",
+      "verified": false,
+      "bytes": 26169
+    },
+    {
+      "id": "graal-wiki",
+      "file": "docs/graal_wiki.md",
+      "title": "Graal Bible (wiki export)",
+      "summary": "Export of the Graal Bible wiki",
+      "kind": "wiki",
+      "verified": false,
+      "bytes": 2313988
+    },
+    {
+      "id": "gui-controls",
+      "file": "docs/gui-controls.md",
+      "title": "GUI Controls Reference",
+      "summary": "The GUI controls; every control inherits from GuiControl",
+      "kind": "guide",
+      "verified": false,
+      "bytes": 17254
+    },
+    {
+      "id": "gui-profiles",
+      "file": "docs/gui-profiles.md",
+      "title": "GUI Profiles Reference",
+      "summary": "GUI profiles, which define how controls look",
+      "kind": "guide",
+      "verified": false,
+      "bytes": 5904
+    },
+    {
+      "id": "particle-engine",
+      "file": "docs/particle-engine.md",
+      "title": "Particle Engine Reference",
+      "summary": "The particle engine, an extension of showimg",
+      "kind": "guide",
+      "verified": false,
+      "bytes": 13950
+    },
+    {
+      "id": "scriptfunctions",
+      "file": "docs/scriptfunctions.txt",
+      "title": "scriptfunctions",
+      "summary": "Script functions by object",
+      "kind": "list",
+      "verified": false,
+      "bytes": 107848
+    },
+    {
+      "id": "scriptfunctions-client",
+      "file": "docs/scriptfunctions_client.md",
+      "title": "Client Script Functions and Variables",
+      "summary": "Client script functions and events by object",
+      "kind": "guide",
+      "verified": false,
+      "bytes": 121698
+    },
+    {
+      "id": "scripthelp-rc",
+      "file": "docs/scripthelp_rc.txt",
+      "title": "scripthelp_rc",
+      "summary": "Script help entries for scripts in the Remote Control, including the $pref:: variables",
+      "kind": "list",
+      "verified": false,
+      "bytes": 150626
+    }
+  ]
+}
