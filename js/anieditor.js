@@ -707,8 +707,21 @@ function serializeMovieFrameState(item, frameId) {
     const state = item.frames.get(frameId) || {};
     const pairs = [];
     const has = key => Object.prototype.hasOwnProperty.call(state, key);
+    // An empty value is only written when it ends what an earlier key started (a chat line, a text):
+    // left out, the earlier value would hold on after the file is opened again.
+    const endsEarlier = key => {
+        if (key !== "chat" && key !== "text") return false;
+        let last;
+        for (const entry of item.keyEntries().sort((a, b) => a.time - b.time)) {
+            if (entry.time >= frameId) break;
+            const value = item.getKeyValue(entry.state, key);
+            if (value !== undefined) last = value;
+        }
+        return last !== undefined && last !== null && String(last) !== "";
+    };
     const push = (key, value) => {
-        if (value === undefined || value === null || value === "") return;
+        if (value === undefined || value === null) return;
+        if (value === "" && !endsEarlier(key)) return;
         pairs.push([key, value]);
     };
     if (has("visible")) push("visible", state.visible ? "true" : "false");
@@ -2328,7 +2341,8 @@ function getMovieActorDefaultOverrides(state) {
         if (value !== undefined) out.set(key.toUpperCase(), value || MOVIE_EMPTY_DEFAULT);
     }
     for (const key of ["sword", "shield", "horse"]) {
-        if (attrs[key] !== undefined) out.set(key.toUpperCase(), attrs[key] || MOVIE_EMPTY_DEFAULT);
+        const value = state[key] !== undefined ? state[key] : attrs[key];
+        if (value !== undefined) out.set(key.toUpperCase(), value || MOVIE_EMPTY_DEFAULT);
     }
     for (let number = 1; number <= 30; number++) {
         for (const prefix of ["attr", "param"]) {
@@ -10837,6 +10851,8 @@ async function initGaniEditorStartup() {
             };
         }
     }
+    // For code outside this dialog that applies a theme (the MCP tools).
+    window.ganiSyncCanvasBackground = () => syncCanvasBgFromCSS();
     function syncCanvasBgFromCSS() {
         const cssBg = getComputedStyle(document.documentElement).getPropertyValue('--canvas-bg').trim();
         if (cssBg) {
@@ -11453,6 +11469,8 @@ async function initGaniEditorStartup() {
         applyTimelinePreviews(savedTimelinePreviews);
         applySelectionBorderColor(savedSelectionBorderColor, false);
         applySelectionBorderThickness(savedSelectionBorderThickness, false);
+        // For code outside this dialog that changes these settings (the MCP tools): each applies a value and stores it.
+        window.ganiSettings = { applyFont, applyFontSize, applyFontStyle, applyUIScale, applyPixelRendering, applyShowGrid, applyShowGaniGuides, applyGifAnimations, applyLightEffects, applyTimelinePreviews, applySelectionBorderColor, applySelectionBorderThickness, applySelectionBorderOpacity };
         const updateUIScaleDisplay = (value) => {
             const percent = Math.round(value * 100);
             if (settingsUIScaleValue) settingsUIScaleValue.textContent = percent + "%";
