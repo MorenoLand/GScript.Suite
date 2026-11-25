@@ -2050,31 +2050,41 @@ class LevelEditor {
     _commitFloatingStamp() {
         if (!this.selectionTiles?.length) return;
         this.pushUndo();
+        const entry = this._terrainForCurrentLevel() ? this._currentLevelEntry() : null;
+        let clearedHole = false;
         const sx = Math.min(this.selectionStartX, this.selectionEndX);
         const sy = Math.min(this.selectionStartY, this.selectionEndY);
         for (let y = 0; y < this.selectionTiles.length; y++) for (let x = 0; x < (this.selectionTiles[y]?.length || 0); x++) {
             const t = this.selectionTiles[y][x];
             if (t !== undefined && t >= 0) {
                 const tx = sx + x, ty = sy + y;
-                if (tx >= 0 && tx < this.level.width && ty >= 0 && ty < this.level.height)
+                if (tx >= 0 && tx < this.level.width && ty >= 0 && ty < this.level.height) {
                     this.level.setTile(this.currentLayer, tx, ty, t);
+                    if (entry?.terrainHoles?.delete(ty * this.level.width + tx)) clearedHole = true;
+                }
             }
         }
+        if (clearedHole) this.invalidateTerrainCache();
         this.saveSessionDebounced();
     }
 
     _placeTileStamp(cx, cy) {
         if (!this.selectedTilesetTiles?.length) return;
         if (!this._tileUndoPushed) { this.pushUndo(); this._tileUndoPushed = true; }
+        const entry = this._terrainForCurrentLevel() ? this._currentLevelEntry() : null;
+        let clearedHole = false;
         const sw = this.selectedTilesetTiles[0]?.length || 0, sh = this.selectedTilesetTiles.length;
         for (let y = 0; y < sh; y++) for (let x = 0; x < sw; x++) {
             const t = this.selectedTilesetTiles[y]?.[x];
             if (t !== undefined && t >= 0) {
                 const tx = cx + x, ty = cy + y;
-                if (tx >= 0 && tx < this.level.width && ty >= 0 && ty < this.level.height)
+                if (tx >= 0 && tx < this.level.width && ty >= 0 && ty < this.level.height) {
                     this.level.setTile(this.currentLayer, tx, ty, t);
+                    if (entry?.terrainHoles?.delete(ty * this.level.width + tx)) clearedHole = true;
+                }
             }
         }
+        if (clearedHole) this.invalidateTerrainCache();
         this.render();
     }
 
@@ -3126,7 +3136,6 @@ class LevelEditor {
             const worldY = (mouseY - snapPanY) / this.zoom;
             const tileDrawX = Math.floor(worldX / tileWidth) * tileWidth;
             const tileDrawY = Math.floor(worldY / tileHeight) * tileHeight;
-            const terrain = this._terrainForCurrentLevel();
             for (let y = 0; y < selHeight; y++) {
                 for (let x = 0; x < selWidth; x++) {
                     if (this.selectedTilesetTiles[y] && this.selectedTilesetTiles[y][x] !== undefined && this.selectedTilesetTiles[y][x] >= 0) {
@@ -3134,7 +3143,7 @@ class LevelEditor {
                         const tileX = (tileIndex % tilesPerRow) * tileWidth;
                         const tileY = Math.floor(tileIndex / tilesPerRow) * tileHeight;
                         const destX = tileDrawX + x * tileWidth;
-                        const destY = tileDrawY + y * tileHeight - (terrain ? terrain.sampleGlobal((tileDrawX / tileWidth) + x + 0.5, (tileDrawY / tileHeight) + y + 0.5) * tileHeight : 0);
+                        const destY = tileDrawY + y * tileHeight;
                         this.ctx.drawImage(
                             this.level.tilesetImage,
                             tileX, tileY, tileWidth, tileHeight,
