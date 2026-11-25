@@ -33,7 +33,7 @@
     function paintButton() {
         if (!button) return;
         button.title = describe();
-        button.querySelector('span').style.background = dotColor();
+        button.querySelector('span').style.backgroundColor = dotColor();
     }
 
     function addButton() {
@@ -42,10 +42,10 @@
         button = document.createElement('button');
         button.id = 'tbMcpBtn';
         // The look of the title bar's own buttons, which the stylesheet gives them by id.
-        button.style.cssText = '--wails-draggable:no-drag;-webkit-app-region:no-drag;app-region:no-drag;background:none;border:none;border-right:1px solid #2a2a2a;color:#9a9a9e;cursor:pointer;display:inline-flex;align-items:center;gap:5px;padding:0 12px;height:32px;font-family:chevyray,monospace;font-size:12px;';
+        button.style.cssText = '--wails-draggable:no-drag;-webkit-app-region:no-drag;app-region:no-drag;background:none;border:none;border-right:1px solid #2a2a2a;color:#9a9a9e;cursor:pointer;display:inline-flex;align-items:center;justify-content:center;padding:0 10px;height:32px;';
         button.onmouseenter = () => { button.style.background = '#3a3a3e'; button.style.color = '#e0e0e0'; };
         button.onmouseleave = () => { button.style.background = 'none'; button.style.color = '#9a9a9e'; };
-        button.innerHTML = '<span style="display:inline-block;width:8px;height:8px;border-radius:50%;background:#777;"></span>MCP';
+        button.innerHTML = '<span style="display:inline-block;width:15px;height:15px;background:#777;-webkit-mask:url(icons/mcp.svg) center/contain no-repeat;mask:url(icons/mcp.svg) center/contain no-repeat;"></span>';
         button.onclick = openDialog;
         about.parentElement.insertBefore(button, about);
         paintButton();
@@ -160,7 +160,7 @@
         dialog = document.createElement('div');
         dialog.className = 'dialog-overlay';
         dialog.id = 'mcpServerDialog';
-        dialog.style.cssText = 'display:flex;position:fixed;top:0;left:0;width:100%;height:100%;background:rgba(0,0,0,0.7);z-index:10000;justify-content:center;align-items:center;';
+        dialog.style.cssText = 'display:flex;position:fixed;top:0;left:0;width:100%;height:100%;background:transparent;z-index:10000;justify-content:center;align-items:center;';
         dialog.innerHTML = `
             <div class="dialog-content" style="border:2px solid #1a1a1a;width:560px;max-width:92vw;max-height:86vh;display:flex;flex-direction:column;box-shadow:0 4px 16px rgba(0,0,0,0.9);font-family:chevyray,monospace;font-size:12px;">
                 <div class="dialog-titlebar" style="display:flex;align-items:center;padding:10px 14px;gap:8px;"><span style="flex:1;font-size:13px;color:#c0c0c0;user-select:none;">MCP Server</span></div>

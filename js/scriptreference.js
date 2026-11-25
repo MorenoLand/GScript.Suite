@@ -106,14 +106,70 @@
     let searchRun = 0;
 
     const escapeHTML = text => String(text).replace(/[&<>"']/g, char => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#39;' }[char]));
+    // GraalScript colors from the editor's own graal themes, for the examples in the dialog.
+    const GS_KEYWORDS = new Set(['class','extends','implements','import','instanceof','interface','native','package','volatile','throws','break','case','continue','default','do','else','elseif','for','function','if','in','return','switch','while','with','xor','public','const','enum']);
+    const GS_MEMORY = new Set(['new','datablock']);
+    const GS_BUILTINS = new Set(['true','false','nil','null','pi']);
+    const GS_EXTRAS = new Set(['this','thiso','temp','server','serverr','client','clientr','player']);
+    const GS_STYLES = { comment:'color:#75715e;font-style:italic;', string:'color:#e6db74;', number:'color:#be84ff;', keyword:'color:#f92672;', memory:'color:#f92672;font-weight:bold;', builtin:'color:#be84ff;', extras:'color:#f57900;', call:'color:#a6e22b;', operator:'color:#f92672;', identifier:'color:#f8f8f2;' };
+    const highlightCode = code => {
+        const out = [];
+        const colored = (text, style) => out.push(`<span style="${style}">${escapeHTML(text)}</span>`);
+        let i = 0;
+        while (i < code.length) {
+            const rest = code.slice(i);
+            if (rest.startsWith('//')) {
+                const end = code.indexOf('\n', i), stop = end < 0 ? code.length : end;
+                colored(code.slice(i, stop), GS_STYLES.comment); i = stop; continue;
+            }
+            if (rest.startsWith('/*')) {
+                const end = code.indexOf('*/', i + 2), stop = end < 0 ? code.length : end + 2;
+                colored(code.slice(i, stop), GS_STYLES.comment); i = stop; continue;
+            }
+            const char = code[i];
+            if (char === '"' || char === "'") {
+                let j = i + 1;
+                while (j < code.length && code[j] !== char && code[j] !== '\n') j += code[j] === '\\' ? 2 : 1;
+                if (code[j] === char) j++;
+                colored(code.slice(i, j), GS_STYLES.string); i = j; continue;
+            }
+            if (/\d/.test(char)) {
+                let j = i + 1;
+                while (j < code.length && /[\w.]/.test(code[j])) j++;
+                colored(code.slice(i, j), GS_STYLES.number); i = j; continue;
+            }
+            if (/[A-Za-z_]/.test(char)) {
+                let j = i + 1;
+                while (j < code.length && /[\w]/.test(code[j])) j++;
+                const word = code.slice(i, j), lower = word.toLowerCase();
+                const style = GS_KEYWORDS.has(lower) ? GS_STYLES.keyword
+                    : GS_MEMORY.has(lower) ? GS_STYLES.memory
+                    : GS_BUILTINS.has(lower) ? GS_STYLES.builtin
+                    : GS_EXTRAS.has(lower) ? GS_STYLES.extras
+                    : /^\s*\(/.test(code.slice(j)) ? GS_STYLES.call
+                    : GS_STYLES.identifier;
+                colored(word, style); i = j; continue;
+            }
+            if (/[-~^@/%|=+*!?&<>]/.test(char)) { colored(char, GS_STYLES.operator); i++; continue; }
+            out.push(escapeHTML(char)); i++;
+        }
+        return out.join('');
+    };
     const part = name => dialog.querySelector(`[data-ref="${name}"]`);
+    // The clear button fades in only while there is something to clear.
+    const syncClear = () => {
+        if (!dialog) return;
+        const clear = part('clear'), hasText = part('query').value.length > 0;
+        clear.style.opacity = hasText ? '1' : '0';
+        clear.style.pointerEvents = hasText ? 'auto' : 'none';
+    };
 
     function showFunction(entry) {
         part('detail').innerHTML = `
             <div style="font-size:14px;color:#9cdcfe;user-select:text;">${escapeHTML(entry.name)}(${escapeHTML(entry.params.join(', '))})</div>
             <div style="margin-top:4px;color:#aaa;">${entry.returns ? `returns ${escapeHTML(entry.returns)}` : ''}${entry.returns && entry.scope ? ' · ' : ''}${escapeHTML(entry.scope)}</div>
             <div style="margin-top:10px;white-space:pre-wrap;user-select:text;line-height:1.5;">${escapeHTML(entry.description)}</div>
-            ${entry.example ? `<div style="margin-top:12px;color:#aaa;">Example</div><pre style="margin:4px 0 0;padding:8px;background:#141414;border:1px solid #333;white-space:pre-wrap;user-select:text;font-family:monospace;font-size:12px;">${escapeHTML(entry.example)}</pre>` : ''}
+            ${entry.example ? `<div style="margin-top:12px;color:#aaa;">Example</div><pre style="margin:4px 0 0;padding:8px;background:#141414;border:1px solid #333;white-space:pre-wrap;user-select:text;font-family:monospace;font-size:12px;">${highlightCode(entry.example)}</pre>` : ''}
             <div style="margin-top:14px;color:#777;">From api.gscript.dev</div>`;
     }
 
@@ -207,7 +263,10 @@
     <button data-ref="close" style="${BUTTON}padding:2px 8px;">✕</button>
   </div>
   <div style="display:flex;gap:8px;padding:8px 10px;border-bottom:1px solid #111;align-items:center;">
-    <input data-ref="query" type="text" placeholder="Search functions" style="${INPUT}flex:1 1 auto;min-width:120px;width:auto;">
+    <div style="position:relative;display:flex;flex:1 1 auto;min-width:120px;">
+      <input data-ref="query" type="text" placeholder="Search functions" style="${INPUT}width:100%;padding-right:26px;">
+      <button data-ref="clear" title="Clear" aria-label="Clear search" style="position:absolute;right:2px;top:50%;transform:translateY(-50%);width:22px;height:22px;display:flex;align-items:center;justify-content:center;background:none;border:none;color:#999;cursor:pointer;font-family:chevyray,monospace;font-size:13px;line-height:1;opacity:0;pointer-events:none;transition:opacity 120ms;">✕</button>
+    </div>
     <div data-ref="sources" style="display:flex;flex:0 0 auto;">${SOURCES.map(([value, label]) => `<button data-source="${value}" style="${BUTTON}">${label}</button>`).join('')}</div>
   </div>
   <div style="flex:1;min-height:0;display:flex;">
@@ -218,7 +277,8 @@
             document.body.appendChild(dialog);
             dialog._closeModal = close;
             part('close').onclick = close;
-            part('query').oninput = () => { clearTimeout(searchTimer); searchTimer = setTimeout(runSearch, 200); };
+            part('query').oninput = () => { syncClear(); clearTimeout(searchTimer); searchTimer = setTimeout(runSearch, 200); };
+            part('clear').onclick = () => { part('query').value = ''; syncClear(); part('query').focus(); clearTimeout(searchTimer); runSearch(); };
             const markSource = () => part('sources').querySelectorAll('button').forEach(button => { button.style.background = button.dataset.source === source ? '#4169a8' : '#3a3a3a'; });
             part('sources').querySelectorAll('button').forEach(button => { button.onclick = () => { source = button.dataset.source; markSource(); runSearch(); }; });
             markSource();
@@ -231,6 +291,7 @@
         }
         dialog.style.display = 'flex';
         if (query !== undefined) part('query').value = query;
+        syncClear();
         part('query').focus();
         runSearch();
     }

@@ -20,4 +20,9 @@
     // runtime's, and every event sent from Go was dropped once an editor had loaded.
     const shared = window._wails = window._wails || {};
     window.__GSUITE__ = Object.assign(shared, { core: { invoke }, event: { listen }, fs: { readTextFile: path => invoke('read_text_file', { path }), readFile, writeTextFile: (path, content) => invoke('write_text_file', { path, content }), writeFile, readDir }, dialog: { open: openDialog, save: saveDialog }, window: { getCurrentWindow: getWindow }, updater: { check: async () => { const version = await invoke('check_for_update'); return version ? { available: true, version } : { available: false }; }, doUpdate: () => invoke('do_update') }  });
+    document.addEventListener('keydown', event => {
+        if (event.key !== 'F11' && event.key !== 'F12' && !(event.ctrlKey && event.shiftKey && event.key.toLowerCase() === 'i')) return;
+        event.preventDefault();
+        window.wails?.Window?.OpenDevTools?.();
+    });
 })();

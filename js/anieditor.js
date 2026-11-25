@@ -7789,15 +7789,18 @@ async function initGaniEditorStartup() {
                         if (ani) { ani.fileName = file.name; addTab(ani, ani.fileName); }
                     };
                     reader.readAsText(file);
-                } else if (['nw', 'graal', 'zelda'].includes(ext)) {
+                } else if (['nw', 'graal', 'zelda', 'gmap'].includes(ext)) {
                     window.switchToTab?.('level');
-                    setTimeout(() => {
-                        const editor = window._levelEditor;
-                        if (editor && typeof editor.openLevel === 'function') {
-                            const data = { files: [file], ext };
-                            editor.openLevel.call(editor, data);
+                    const openInLevelEditor = (tries = 40) => {
+                        const editor = window.levelEditor || window._editor;
+                        if (!editor || typeof editor.openFromText !== 'function') {
+                            if (tries > 0) setTimeout(() => openInLevelEditor(tries - 1), 50);
+                            return;
                         }
-                    }, 50);
+                        if (ext === 'graal' || ext === 'zelda') file.arrayBuffer().then(buffer => editor.openFromBuffer(buffer, file.name, file.path || null));
+                        else file.text().then(text => editor.openFromText(text, file.name, file.path || null));
+                    };
+                    openInLevelEditor();
                 }
             });
         };
@@ -16411,7 +16414,7 @@ function showAlertDialog(message, callback) {
     dialog.style.left = "0";
     dialog.style.width = "100%";
     dialog.style.height = "100%";
-    dialog.style.background = "rgba(0, 0, 0, 0.7)";
+    dialog.style.background = "transparent";
     dialog.style.zIndex = "10000";
     const content = document.createElement("div");
     content.style.background = "#2b2b2b";
@@ -16452,7 +16455,7 @@ function showPromptDialog(message, defaultValue, callback) {
     dialog.style.left = "0";
     dialog.style.width = "100%";
     dialog.style.height = "100%";
-    dialog.style.background = "rgba(0, 0, 0, 0.7)";
+    dialog.style.background = "transparent";
     dialog.style.zIndex = "10000";
     const content = document.createElement("div");
     content.style.background = "#2b2b2b";
@@ -16529,7 +16532,7 @@ function showColorPickerDialog(currentColor, callback) {
     dialog.style.left = "0";
     dialog.style.width = "100%";
     dialog.style.height = "100%";
-    dialog.style.background = "rgba(0, 0, 0, 0.7)";
+    dialog.style.background = "transparent";
     dialog.style.zIndex = "10000";
     const content = document.createElement("div");
     content.style.background = "#2b2b2b";

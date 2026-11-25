@@ -17,6 +17,10 @@ function _matchKB(e, b) {
     if (nc !== e.ctrlKey || ns !== e.shiftKey || na !== e.altKey) return false;
     return e.key === key || e.key.toLowerCase() === key.toLowerCase();
 }
+function showLevelAlert(message) {
+    if (typeof showAlertDialog === 'function') showAlertDialog(message);
+    else console.warn('[level editor]', message);
+}
 function _fmtKB(b) {
     if (!b) return '—';
     return b.split('+').map(p => p===' '?'Space':p.toLowerCase()==='escape'?'Esc':p.toLowerCase()==='delete'?'Del':p==='ctrl'?'Ctrl':p==='shift'?'Shift':p==='alt'?'Alt':p.length===1?p:p[0].toUpperCase()+p.slice(1)).join('+');
@@ -762,7 +766,6 @@ class LevelEditor {
         this._terrainMemberCache = new Map();
         this._terrainTilesetData = null;
         this._terrainTilesetSource = null;
-        this._terrainDialog = null;
 
         this.init();
     }
@@ -1072,6 +1075,8 @@ class LevelEditor {
         this.$('btnGrid').addEventListener('click', () => this.toggleGrid());
         this.$('btnCenterView').addEventListener('click', () => this.centerView());
         this.$('btnSnapGrid').addEventListener('click', () => this.toggleSnapGrid());
+        const btnTerrainEdit = this.$('btnTerrainEdit');
+        if (btnTerrainEdit) btnTerrainEdit.addEventListener('click', () => this.toggleTerrainEdit());
         const btnUndo = this.$('btnUndo');
         if (btnUndo) btnUndo.addEventListener('click', () => this.undo());
         const btnRedo = this.$('btnRedo');
@@ -1090,8 +1095,6 @@ class LevelEditor {
         if (btnFill) btnFill.addEventListener('click', () => { this.floodFillEnabled = !this.floodFillEnabled; if (this.floodFillEnabled) this.setTool('draw'); btnFill.classList.toggle('active', this.floodFillEnabled); });
         const btnEraser = this.$('btnEraserTool');
         if (btnEraser) btnEraser.addEventListener('click', () => this.setTool('eraser'));
-        const btnTerrain = this.$('btnTerrain');
-        if (btnTerrain) btnTerrain.addEventListener('click', () => this.openTerrainDialog());
         const btnSelect = this.$('btnSelect');
         if (btnSelect) btnSelect.addEventListener('click', () => { this.objectMode = false; this.setTool('select'); });
         const btnCloseAll = this.$('btnCloseAll');
@@ -1361,9 +1364,6 @@ class LevelEditor {
         if (this.terrainEdit) {
             if (e.button === 0 || e.button === 2) { this._beginTerrainDrag(e); e.preventDefault(); }
             return;
-        }
-        if (!this._playMode && (e.button === 0 || e.button === 2) && this._terrainControlAt(e)) {
-            this._beginTerrainDrag(e); e.preventDefault(); return;
         }
         const coords = this.getCanvasCoords(e);
         if (this._linkPickMode && e.button === 0) {
@@ -2114,7 +2114,8 @@ class LevelEditor {
         return {
             layers: this.level.layers.map(l => [...l.tiles]),
             objects: this.level.objects.map(o => ({ x: o.x, y: o.y, type: o.type, id: o.id, properties: JSON.parse(JSON.stringify(o.properties)) })),
-            terrain: entry?.terrain ? {text: entry.terrain.saveText(), name: entry.name} : null
+            terrain: entry?.terrain ? {text: entry.terrain.saveText(), name: entry.name} : null,
+            terrainHoles: entry?.terrainHoles ? [...entry.terrainHoles] : null
         };
     }
 
@@ -2126,6 +2127,7 @@ class LevelEditor {
                 entry.terrain = window.GraalTerrain.TerrainMap.parse(snap.terrain.text);
                 entry.gmapText = snap.terrain.text;
                 entry.terrainApplied = !!entry.terrain?.hasTerrainData;
+                entry.terrainHoles = snap.terrainHoles ? new Set(snap.terrainHoles) : null;
                 this.invalidateTerrainCache();
             } catch (error) { console.warn('[terrain undo]', error.message); }
         }
@@ -2297,14 +2299,19 @@ class LevelEditor {
 
         if (x >= 0 && x < this.level.width && y >= 0 && y < this.level.height) {
             const tileVal = this.currentTool === 'eraser' ? -1 : this.defaultTile;
+            const entry = tileVal >= 0 && this._terrainForCurrentLevel() ? this._currentLevelEntry() : null;
+            let clearedHole = false;
             for (let dy = 0; dy < this.brushHeight; dy++) {
                 for (let dx = 0; dx < this.brushWidth; dx++) {
                     const tx = x + dx;
                     const ty = y + dy;
-                    if (tx >= 0 && tx < this.level.width && ty >= 0 && ty < this.level.height)
+                    if (tx >= 0 && tx < this.level.width && ty >= 0 && ty < this.level.height) {
                         this.level.setTile(this.currentLayer, tx, ty, tileVal);
+                        if (entry?.terrainHoles?.delete(ty * this.level.width + tx)) clearedHole = true;
+                    }
                 }
             }
+            if (clearedHole) this.invalidateTerrainCache();
             this.render();
         }
     }
@@ -2359,7 +2366,7 @@ class LevelEditor {
         }
 
         this.drawObjects();
-        if (!this._playMode) this.drawTerrainControls(this._terrainForCurrentLevel());
+        if (!this._playMode && this.terrainEdit) this.drawTerrainControls(this._terrainForCurrentLevel());
 
         if (this.selectionStartX >= 0 && this.selectionEndX >= 0) {
             this.drawSelection({ fill: !this._floatingStamp });
@@ -2560,6 +2567,7 @@ class LevelEditor {
         if (selectedObjects.length) {
             const minX = Math.min(...selectedObjects.map(o => o.x));
             const minY = Math.min(...selectedObjects.map(o => o.y));
+            this._clipboardTiles = null;
             this._clipboardObjects = selectedObjects.map(o => ({
                 dx: o.x - minX,
                 dy: o.y - minY,
@@ -2571,6 +2579,7 @@ class LevelEditor {
             return;
         }
         if (!this.hasSelection()) return;
+        this._clipboardObjects = null;
         this._clipboardTiles = this._captureSelectionAsStamp();
         this._clipboardOriginX = Math.min(this.selectionStartX, this.selectionEndX);
         this._clipboardOriginY = Math.min(this.selectionStartY, this.selectionEndY);
@@ -2606,6 +2615,21 @@ class LevelEditor {
         this.selectedTilesetTiles = null;
         this.updateSelectedTileDisplay();
     }
+    _clearSelectionTiles() {
+        const sx = Math.min(this.selectionStartX, this.selectionEndX), sy = Math.min(this.selectionStartY, this.selectionEndY);
+        const ex = Math.max(this.selectionStartX, this.selectionEndX), ey = Math.max(this.selectionStartY, this.selectionEndY);
+        const terrain = this._terrainForCurrentLevel();
+        const entry = this._currentLevelEntry();
+        if (terrain && entry) {
+            entry.terrainHoles ??= new Set();
+            for (let y = sy; y <= ey; y++) for (let x = sx; x <= ex; x++) entry.terrainHoles.add(y * this.level.width + x);
+        }
+        for (let y = sy; y <= ey; y++) for (let x = sx; x <= ex; x++) {
+            if (this.currentLayer !== 0 || !terrain) this.level.setTile(this.currentLayer, x, y, -1);
+        }
+        if (terrain) this.invalidateTerrainCache();
+    }
+
     _doCut() {
         const selectedObjects = this.getSelectedObjects();
         if (selectedObjects.length) {
@@ -2618,12 +2642,10 @@ class LevelEditor {
             return;
         }
         if (!this.hasSelection()) return;
+        this._clipboardObjects = null;
         this._clipboardTiles = this._captureSelectionAsStamp();
         this.pushUndo();
-        const fillTile = this.defaultTile >= 0 ? this.defaultTile : 0;
-        const sx = Math.min(this.selectionStartX, this.selectionEndX), sy = Math.min(this.selectionStartY, this.selectionEndY);
-        const ex = Math.max(this.selectionStartX, this.selectionEndX), ey = Math.max(this.selectionStartY, this.selectionEndY);
-        for (let y = sy; y <= ey; y++) for (let x = sx; x <= ex; x++) this.level.setTile(this.currentLayer, x, y, fillTile);
+        this._clearSelectionTiles();
         this.render(); this.saveSessionDebounced();
     }
     _doDelete() {
@@ -2641,10 +2663,7 @@ class LevelEditor {
         }
         else if (this.hasSelection()) {
             this.pushUndo();
-            const fillTile = this.defaultTile >= 0 ? this.defaultTile : 0;
-            const sx = Math.min(this.selectionStartX, this.selectionEndX), sy = Math.min(this.selectionStartY, this.selectionEndY);
-            const ex = Math.max(this.selectionStartX, this.selectionEndX), ey = Math.max(this.selectionStartY, this.selectionEndY);
-            for (let y = sy; y <= ey; y++) for (let x = sx; x <= ex; x++) this.level.setTile(this.currentLayer, x, y, fillTile);
+            this._clearSelectionTiles();
             this.render();
             this.saveSessionDebounced();
         }
@@ -3225,6 +3244,7 @@ class LevelEditor {
         if (this._terrainMemberCache.has(key)) return this._terrainMemberCache.get(key);
         const tileset = this._terrainTileset();
         if (!tileset || !this.level?.tilesetImage) return null;
+        const holes = this._currentLevelEntry()?.terrainHoles;
         const topShift = Math.ceil(Math.max(0, terrain.maximumHeight) * 16);
         const bottomExtra = Math.ceil(Math.max(0, -terrain.minimumHeight) * 16) + 1;
         const width = 64 * 16, height = 64 * 16 + topShift + bottomExtra;
@@ -3235,6 +3255,7 @@ class LevelEditor {
                 const worldX = memberX * 64 + tileX, worldY = memberY * 64 + tileY;
                 if (worldX >= this.level.width || worldY >= this.level.height) continue;
                 const tileIndex = this.level.getTile(0, worldX, worldY);
+                if (holes?.has(worldY * this.level.width + worldX)) continue;
                 const corners = terrain.getCorners(memberX, memberY, tileX, tileY);
                 const source = this._terrainTileSource(this._terrainWord(tileIndex < 0 ? 0 : tileIndex), corners, tileX, tileY);
                 const waterSource = {x: source.x & 0xff, y: (source.y & 0xff) + 0x30};
@@ -3374,6 +3395,7 @@ class LevelEditor {
         if (!terrain) return false;
         this.pushUndo();
         this._terrainDrag = {...control, startClientY: event.clientY, startHeight: terrain.sampleGlobal(control.x, control.y), button: event.button};
+        this._terrainDragRenderAt = 0;
         this.canvas.style.cursor = 'ns-resize';
         this.requestRender();
         return true;
@@ -3386,11 +3408,24 @@ class LevelEditor {
         let height = this._terrainDrag.startHeight + (this._terrainDrag.startClientY - event.clientY) / (16 * this.zoom);
         if (this._terrainDrag.button === 2 || (event.buttons & 2)) height = Math.floor(height + 0.0001);
         if (terrain.setHeightSpot(this._terrainDrag.x, this._terrainDrag.y, height)) {
+            const x = this._terrainDrag.x, y = this._terrainDrag.y;
+            const mx = Math.floor(x / 64), my = Math.floor(y / 64);
+            const affected = [];
+            const add = (ax, ay) => { if (ax >= 0 && ay >= 0 && ax < terrain.width && ay < terrain.height && !affected.some(m => m.x === ax && m.y === ay)) affected.push({x: ax, y: ay}); };
+            add(mx, my);
+            if (x % 64 === 0 && mx > 0) add(mx - 1, my);
+            if (y % 64 === 0 && my > 0) add(mx, my - 1);
+            if (x % 64 === 0 && y % 64 === 0 && mx > 0 && my > 0) add(mx - 1, my - 1);
+            for (const member of affected) {
+                for (const key of [...this._terrainMemberCache.keys()]) if (key.startsWith(`${member.x}:${member.y}:`)) this._terrainMemberCache.delete(key);
+            }
             const entry = this._currentLevelEntry();
-            if (entry) { entry.gmapText = terrain.saveText(); entry.modified = true; entry.terrainApplied = true; }
-            this.invalidateTerrainCache();
-            this.requestRender();
-            this.saveSessionDebounced();
+            if (entry) { entry.modified = true; entry.terrainApplied = true; }
+            const now = performance.now();
+            if (!this._terrainDragRenderAt || now - this._terrainDragRenderAt >= 120) {
+                this._terrainDragRenderAt = now;
+                this.requestRender();
+            }
         }
         return true;
     }
@@ -3398,137 +3433,16 @@ class LevelEditor {
     _endTerrainDrag() {
         if (!this._terrainDrag) return false;
         this._terrainDrag = null;
-        this.canvas.style.cursor = '';
+        this._terrainDragRenderAt = 0;
+        const terrain = this._terrainForCurrentLevel();
+        if (terrain) {
+            const entry = this._currentLevelEntry();
+            if (entry) { entry.gmapText = terrain.saveText(); entry.modified = true; entry.terrainApplied = terrain.hasTerrainData; }
+        }
+        this.canvas.style.cursor = this.terrainEdit ? 'ns-resize' : '';
         this.requestRender();
         this.saveSessionDebounced();
         return true;
-    }
-
-    openTerrainDialog() {
-        const entry = this._currentLevelEntry();
-        if (!entry?.gmapGrid) { alert('Terrain editing is available for .gmap worlds.'); return; }
-        const TerrainMap = window.GraalTerrain?.TerrainMap;
-        if (!TerrainMap) { alert('Terrain module is not loaded.'); return; }
-        if (!entry.terrain) { try { entry.terrain = TerrainMap.parse(entry.gmapText); } catch (error) { alert('Terrain: ' + error.message); return; } }
-        if (!entry.terrain) { alert('Terrain: the gmap could not be read.'); return; }
-        if (this._terrainDialog) this._terrainDialog.remove();
-        const dialog = document.createElement('div');
-        dialog.className = 'ed-dialog-box';
-        dialog.style.cssText = 'position:fixed;top:50%;left:50%;transform:translate(-50%,-50%);background:#2b2b2b;border:1px solid #404040;padding:14px 16px;z-index:99999;width:560px;max-width:94vw;max-height:90vh;overflow:auto;color:#e0e0e0;font-size:13px;';
-        const terrain = entry.terrain;
-        const field = (label, id, value, step = 'any') => '<label style="display:flex;justify-content:space-between;gap:8px;margin:3px 0;"><span>' + label + '</span><input id="' + id + '" type="number" step="' + step + '" value="' + value + '" style="width:150px;"></label>';
-        dialog.innerHTML = `
-            <div class="ed-dlg-title" style="font-weight:bold;margin-bottom:10px;">Terrain: ${entry.name}</div>
-            <label style="display:flex;align-items:center;gap:8px;margin-bottom:8px;"><input type="checkbox" id="_terrainPreview" ${this.terrainPreview ? 'checked' : ''}> Preview terrain in canvas</label>
-            <div style="display:grid;grid-template-columns:1fr 1fr;gap:0 16px;">
-                ${field('Seed', '_terrainSeed', terrain.mapSeed, '1')}
-                ${field('Base height', '_terrainBase', terrain.baseHeight)}
-                ${field('Map height', '_terrainMapHeight', terrain.mapHeight)}
-                ${field('Map chaos', '_terrainMapChaos', terrain.mapChaos)}
-                ${field('Level height', '_terrainLevelHeight', terrain.levelHeight)}
-                ${field('Level chaos', '_terrainLevelChaos', terrain.levelChaos)}
-            </div>
-            <label style="display:flex;align-items:center;gap:8px;margin:4px 0 10px;"><input type="checkbox" id="_terrainEven" ${terrain.evenBorders ? 'checked' : ''}> Even borders</label>
-            <div style="display:flex;gap:6px;flex-wrap:wrap;margin-bottom:10px;">
-                <button id="_terrainGenerate">Generate Map</button>
-                <button id="_terrainRegenerate">Regenerate Levels</button>
-                <button id="_terrainRaise">Raise All</button>
-                <button id="_terrainLower">Lower All</button>
-                <button id="_terrainClear">Clear Overrides</button>
-                <button id="_terrainEdit">${this.terrainEdit ? 'Stop Height Edit' : 'Edit Height Controls'}</button>
-            </div>
-            <div style="font-size:11px;color:#b0b0b0;margin-bottom:4px;">Map controls (${terrain.width + 1} × ${terrain.height + 1})</div>
-            <canvas id="_terrainHeightMap" width="520" height="240" style="width:100%;height:240px;border:1px solid #404040;background:#111;image-rendering:pixelated;cursor:crosshair;"></canvas>
-            <div style="display:flex;gap:6px;align-items:center;margin-top:8px;">
-                <span style="font-size:11px;">Selected control:</span>
-                <input id="_terrainValue" type="number" step="any" style="width:120px;">
-                <button id="_terrainApply">Apply</button>
-                <span id="_terrainSelected" style="font-size:11px;color:#b0b0b0;"></span>
-            </div>
-            <div style="font-size:11px;color:#b0b0b0;margin-top:8px;">Drag a control vertically to change it; drag the map above to edit the corner heightmap. Right-drag height controls snaps to whole numbers.</div>
-            <div style="display:flex;justify-content:flex-end;margin-top:12px;"><button id="_terrainClose">Close</button></div>`;
-        document.body.appendChild(dialog);
-        this._terrainDialog = dialog;
-        dialog._closeModal = () => { this._terrainDialog = null; dialog.remove(); };
-        const $id = id => dialog.querySelector('#' + id);
-        $id('_terrainClose').onclick = dialog._closeModal;
-        $id('_terrainPreview').onchange = (event) => { this.terrainPreview = event.target.checked; this.render(); };
-        const syncText = () => {
-            entry.gmapText = terrain.saveText();
-            entry.modified = true;
-            entry.terrainApplied = terrain.hasTerrainData;
-            this.invalidateTerrainCache();
-            this.render();
-            this.saveSessionDebounced();
-        };
-        const readSettings = () => ({
-            mapSeed: $id('_terrainSeed').value,
-            baseHeight: $id('_terrainBase').value,
-            evenBorders: $id('_terrainEven').checked,
-            mapHeight: $id('_terrainMapHeight').value,
-            mapChaos: $id('_terrainMapChaos').value,
-            levelHeight: $id('_terrainLevelHeight').value,
-            levelChaos: $id('_terrainLevelChaos').value
-        });
-        $id('_terrainGenerate').onclick = () => { terrain.setSettings(readSettings()); terrain.regenerate(true); syncText(); drawHeightMap(); };
-        $id('_terrainRegenerate').onclick = () => { terrain.setSettings(readSettings()); terrain.regenerate(false); syncText(); drawHeightMap(); };
-        $id('_terrainRaise').onclick = () => { terrain.shiftAll(1); syncText(); drawHeightMap(); };
-        $id('_terrainLower').onclick = () => { terrain.shiftAll(-1); syncText(); drawHeightMap(); };
-        $id('_terrainClear').onclick = () => { terrain.clearOverrides(); syncText(); drawHeightMap(); };
-        $id('_terrainEdit').onclick = () => { this.terrainEdit = !this.terrainEdit; this.canvas.style.cursor = this.terrainEdit ? 'ns-resize' : ''; this.render(); dialog._closeModal(); };
-        $id('_terrainApply').onclick = () => { if (!selectedControl) return; const value = Number($id('_terrainValue').value); if (!Number.isFinite(value)) return; terrain.setMapControl(selectedControl.x, selectedControl.y, value); syncText(); drawHeightMap(); };
-        let selectedControl = null;
-        let mapDrag = null;
-        const canvas = $id('_terrainHeightMap');
-        const context = canvas.getContext('2d');
-        const drawHeightMap = () => {
-            const width = terrain.width + 1, height = terrain.height + 1;
-            const values = terrain.heightMap.length ? terrain.heightMap : new Array(width * height).fill(0);
-            let minimum = Infinity, maximum = -Infinity;
-            for (const value of values) { minimum = Math.min(minimum, value); maximum = Math.max(maximum, value); }
-            if (minimum === maximum) { minimum -= 1; maximum += 1; }
-            const cellW = canvas.width / width, cellH = canvas.height / height;
-            for (let y = 0; y < height; y++) for (let x = 0; x < width; x++) {
-                const t = (values[y * width + x] - minimum) / (maximum - minimum);
-                const r = Math.round(255 * Math.min(1, Math.max(0, 1.5 - Math.abs(t - 0.75) * 4)));
-                const g = Math.round(255 * Math.min(1, Math.max(0, 1.5 - Math.abs(t - 0.5) * 4)));
-                const b = Math.round(255 * Math.min(1, Math.max(0, 1.5 - Math.abs(t - 0.25) * 4)));
-                context.fillStyle = `rgb(${r},${g},${b})`;
-                context.fillRect(x * cellW, y * cellH, Math.ceil(cellW), Math.ceil(cellH));
-            }
-            context.strokeStyle = 'rgba(0,0,0,0.35)';
-            context.lineWidth = 1;
-            for (let x = 0; x <= width; x++) { context.beginPath(); context.moveTo(x * cellW, 0); context.lineTo(x * cellW, canvas.height); context.stroke(); }
-            for (let y = 0; y <= height; y++) { context.beginPath(); context.moveTo(0, y * cellH); context.lineTo(canvas.width, y * cellH); context.stroke(); }
-            if (selectedControl) { context.strokeStyle = '#fff'; context.lineWidth = 2; context.strokeRect(selectedControl.x * cellW, selectedControl.y * cellH, cellW, cellH); }
-        };
-        const pickControl = (event) => {
-            const rect = canvas.getBoundingClientRect();
-            const x = Math.floor((event.clientX - rect.left) / rect.width * (terrain.width + 1));
-            const y = Math.floor((event.clientY - rect.top) / rect.height * (terrain.height + 1));
-            if (x < 0 || y < 0 || x > terrain.width || y > terrain.height) return null;
-            return {x, y};
-        };
-        canvas.onmousedown = (event) => {
-            const control = pickControl(event);
-            if (!control) return;
-            selectedControl = control;
-            $id('_terrainValue').value = terrain.heightMap[control.y * (terrain.width + 1) + control.x] || 0;
-            $id('_terrainSelected').textContent = `${control.x}, ${control.y}`;
-            mapDrag = {control, startY: event.clientY, startValue: terrain.heightMap[control.y * (terrain.width + 1) + control.x] || 0};
-            drawHeightMap();
-        };
-        canvas.onmousemove = (event) => {
-            if (!mapDrag) return;
-            const value = mapDrag.startValue + (mapDrag.startY - event.clientY) / 8;
-            terrain.setMapControl(mapDrag.control.x, mapDrag.control.y, Math.round(value * 100) / 100);
-            $id('_terrainValue').value = terrain.heightMap[mapDrag.control.y * (terrain.width + 1) + mapDrag.control.x];
-            syncText();
-            drawHeightMap();
-        };
-        canvas.onmouseup = () => { mapDrag = null; };
-        canvas.onmouseleave = () => { mapDrag = null; };
-        drawHeightMap();
     }
 
     _getLayerCache(layerIndex) {
@@ -3701,8 +3615,6 @@ class LevelEditor {
                         parsedSharedTabs = Array.isArray(parsed) ? parsed : (Array.isArray(parsed?.tabs) ? parsed.tabs : []);
                     } catch(e) {}
                 }
-                const hasSavedLevelTabs = parsedSharedTabs.some(t => t?.type === 'level');
-                const hasSavedNonLevelTabs = parsedSharedTabs.some(t => t?.type && t.type !== 'level');
                 if (sessionRaw && parsedSharedTabs.length) {
                     try {
                         const data = JSON.parse(sessionRaw);
@@ -3778,7 +3690,7 @@ class LevelEditor {
                         }
                     } catch(e) {}
                 }
-                if (!restored && (!hasSavedNonLevelTabs || hasSavedLevelTabs)) {
+                if (!restored && this.levels.length === 0) {
                     const wEl = this.$('levelWidth');
                     const hEl = this.$('levelHeight');
                     const w = wEl ? parseInt(wEl.value) || 64 : 64;
@@ -4405,8 +4317,7 @@ class LevelEditor {
         const entry = this.levels[index];
         const suiteTabsList = document.getElementById('suiteTabsList');
         if (window.tabManager && typeof window.tabManager.addTab === 'function' && suiteTabsList) {
-            window.tabManager.addTab('level', entry.name, { level: entry.level, index });
-            return;
+            if (window.tabManager.addTab('level', entry.name, { level: entry.level, index })) return;
         }
         const tabsContainer = this.$('suiteTabsList');
         if (!tabsContainer) { return; }
@@ -6519,7 +6430,7 @@ class LevelEditor {
             await Promise.all([...toLoad].map(name => this._loadGmapMember(name, dir, sep)));
         }
         const entry = this._buildGmapEntry(text, filename, levelsOverride);
-        if (!entry) return;
+        if (!entry) { showLevelAlert(`Could not read ${filename} as a gmap.`); return; }
         entry.fullPath = filePath || entry.fullPath || '';
         this.levels.push(entry);
         this.currentLevelIndex = this.levels.length - 1;
@@ -6530,37 +6441,37 @@ class LevelEditor {
         this.loadDefaultTileset();
         if (entry.level.tilesetName && entry.level.tilesetName !== 'pics1.png') this.loadTilesetImage(entry.level.tilesetName);
         this.updateUI();
-        this.render();
+        this.centerView();
         this.saveSessionDebounced();
     }
 
     openFromText(text, name, filePath = null) {
         const ext = name.split('.').pop().toLowerCase();
-        if (ext === 'gmap') { this.openGmapText(text, name, null, filePath); return; }
+        if (ext === 'gmap') { this.openGmapText(text, name, null, filePath).catch(error => showLevelAlert(`Could not open ${name}: ${error.message || error}`)); return; }
         if (ext === 'gani') { window.switchToTab?.('gani'); if (typeof parseGani === 'function' && typeof addTab === 'function') { const ani = parseGani(text); if (ani) { ani.fileName = name; addTab(ani, name); } } return; }
         let level;
         if (ext === 'graal' || ext === 'zelda') { const buf = new TextEncoder().encode(text).buffer; level = Level.loadFromGraal(buf); }
         else level = Level.loadFromNW(text);
-        if (!level) return;
+        if (!level) { showLevelAlert(`Could not parse ${name} as a level.`); return; }
         level.tilesetImage = this.level?.tilesetImage || null;
         level.tilesetName = level.tilesetName || 'pics1.png';
         this.levels.push({ level, name, modified: false, filePath });
         this.currentLevelIndex = this.levels.length - 1;
         this.level = level;
         this.undoStack = []; this.redoStack = [];
-        this.loadDefaultTileset(); this.addLevelTab(this.currentLevelIndex); this.updateLevelTabs(); this.updateUI(); this.render(); this.saveSessionDebounced();
+        this.loadDefaultTileset(); this.addLevelTab(this.currentLevelIndex); this.updateLevelTabs(); this.updateUI(); this.centerView(); this.saveSessionDebounced();
     }
 
     openFromBuffer(buffer, name, filePath = null) {
         const level = Level.loadFromGraal(buffer);
-        if (!level) return;
+        if (!level) { showLevelAlert(`Could not parse ${name} as a Graal level.`); return; }
         level.tilesetImage = this.level?.tilesetImage || null;
         level.tilesetName = 'pics1.png';
         this.levels.push({ level, name, modified: false, filePath });
         this.currentLevelIndex = this.levels.length - 1;
         this.level = level;
         this.undoStack = []; this.redoStack = [];
-        this.loadDefaultTileset(); this.addLevelTab(this.currentLevelIndex); this.updateLevelTabs(); this.updateUI(); this.render(); this.saveSessionDebounced();
+        this.loadDefaultTileset(); this.addLevelTab(this.currentLevelIndex); this.updateLevelTabs(); this.updateUI(); this.centerView(); this.saveSessionDebounced();
     }
 
     _registerDefaultLevelLoader() {
@@ -6616,13 +6527,24 @@ class LevelEditor {
 
     async openLevel() {
         if (_isWails) {
-            const selected = await _wails.dialog.open({ multiple: true, filters: [{ name: 'Graal Files', extensions: ['nw','gmap','graal','zelda','gani'] }] }).catch(() => null);
+            const selected = await _wails.dialog.open({ multiple: true, filters: [{ name: 'Graal Files', extensions: ['nw','gmap','graal','zelda','gani'] }] }).catch(error => { showLevelAlert(`The file dialog failed: ${error.message || error}`); return null; });
             const paths = Array.isArray(selected) ? selected : selected ? [selected] : [];
             for (const path of paths) {
                 const name = path.split(String.fromCharCode(92)).pop().split('/').pop();
                 const ext = name.split('.').pop().toLowerCase();
-                if (ext === 'graal' || ext === 'zelda') { const data = await _wails.fs.readFile(path); this.openFromBuffer(data.buffer || data, name, path); }
-                else this.openFromText(await _wails.fs.readTextFile(path), name, path);
+                try {
+                    if (ext === 'graal' || ext === 'zelda') {
+                        const data = await _wails.fs.readFile(path);
+                        if (data && data.length) this.openFromBuffer(data.buffer || data, name, path);
+                        else showLevelAlert(`Could not read ${name}.`);
+                    } else {
+                        const text = await _wails.fs.readTextFile(path);
+                        if (text) this.openFromText(text, name, path);
+                        else showLevelAlert(`Could not read ${name}.`);
+                    }
+                } catch (error) {
+                    showLevelAlert(`Could not open ${name}: ${error.message || error}`);
+                }
             }
             return;
         }
@@ -7020,6 +6942,14 @@ class LevelEditor {
         this.snapGrid = !this.snapGrid;
         const btn = this.$('btnSnapGrid');
         if (btn) btn.classList.toggle('active', this.snapGrid);
+    }
+
+    toggleTerrainEdit() {
+        this.terrainEdit = !this.terrainEdit;
+        const btn = this.$('btnTerrainEdit');
+        if (btn) btn.classList.toggle('active', this.terrainEdit);
+        this.canvas.style.cursor = this.terrainEdit ? 'ns-resize' : '';
+        this.render();
     }
 
     loadChangelog() {
@@ -9713,7 +9643,7 @@ class LevelEditor {
                 exampleCSS = await res.text();
             } catch (err) {
                 console.warn('[levelCssExample fetch failed]', err);
-                alert('Could not load example-theme.css');
+                showLevelAlert('Could not load example-theme.css');
                 return;
             }
             const choice = document.createElement('div');
