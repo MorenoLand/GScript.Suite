@@ -5,6 +5,7 @@ import (
 	"embed"
 	"io/fs"
 	"log"
+	"net/http"
 	"os"
 	"runtime"
 
@@ -14,7 +15,7 @@ import (
 	"github.com/wailsapp/wails/v3/pkg/updater/providers/endpoint"
 )
 
-const appVersion = "0.1.86"
+const appVersion = "0.1.87"
 const updaterManifestURL = "https://github.com/MorenoLand/GScript.GSuite/releases/latest/download/latest.json"
 
 //go:embed all:frontend
@@ -24,6 +25,9 @@ var assets embed.FS
 var updaterPublicKey []byte
 
 func main() {
+	if runStdioBridge() {
+		return
+	}
 	if runtime.GOOS == "linux" {
 		_ = os.Setenv("WEBKIT_DISABLE_SANDBOX_THIS_IS_DANGEROUS", "1")
 	}
@@ -32,6 +36,8 @@ func main() {
 	var mainWindow *application.WebviewWindow
 	app = newApplication(service, &mainWindow)
 	service.app = app
+	service.startMCP()
+	defer service.stopMCP()
 	provider, err := endpoint.New(endpoint.Config{URL: updaterManifestURL})
 	if err == nil {
 		if err := app.Updater.Init(updater.Config{CurrentVersion: appVersion, PublicKey: updaterPublicKey, Providers: []updater.Provider{provider}}); err != nil {
@@ -62,19 +68,43 @@ func main() {
 }
 
 func newApplication(service *AppService, mainWindow **application.WebviewWindow) *application.App {
-	var app *application.App
-	assetsFS, err := fs.Sub(assets, "frontend/dist")
-	if err != nil {
-		log.Fatal(err)
+	debug := false
+	for _, arg := range os.Args[1:] {
+		if arg == "--debug" {
+			debug = true
+			break
+		}
 	}
-	app = application.New(application.Options{
+	var app *application.App
+	var assetsFS fs.FS
+	if debug {
+		assetsFS = os.DirFS("frontend/dist")
+		log.Println("dev: serving assets from frontend/dist")
+	} else {
+		sub, err := fs.Sub(assets, "frontend/dist")
+		if err != nil {
+			log.Fatal(err)
+		}
+		assetsFS = sub
+	}
+	options := application.Options{
 		Name:             "GSuite",
 		Description:      "Open-source Graal editor suite for levels, animations, and maps",
 		Services:         []application.Service{application.NewService(service)},
-		Assets:           application.AssetOptions{Handler: application.AssetFileServerFS(assetsFS)},
+		Assets: application.AssetOptions{
+			Handler: application.AssetFileServerFS(assetsFS),
+			Middleware: func(next http.Handler) http.Handler {
+				return http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+					w.Header().Set("Cache-Control", "no-store")
+					next.ServeHTTP(w, r)
+				})
+			},
+		},
 		Flags:            map[string]any{"isGSuiteDesktop": true, "enableFileDrop": true},
 		FileAssociations: []string{".nw", ".gmap", ".gani", ".zelda", ".graal"},
-		SingleInstance: &application.SingleInstanceOptions{
+	}
+	if !debug {
+		options.SingleInstance = &application.SingleInstanceOptions{
 			UniqueID: "com.morenoland.gsuite",
 			OnSecondInstanceLaunch: func(data application.SecondInstanceData) {
 				path := firstExistingPathInDir(data.Args, data.WorkingDir)
@@ -87,8 +117,9 @@ func newApplication(service *AppService, mainWindow **application.WebviewWindow)
 				}
 				app.Event.Emit("open-file", path)
 			},
-		},
-	})
+		}
+	}
+	app = application.New(options)
 	return app
 }
 

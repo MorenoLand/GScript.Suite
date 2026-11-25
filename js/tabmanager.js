@@ -157,7 +157,7 @@ const TabManager = {
             }
             this._pendingActiveState = active;
             if (this._pendingActiveClearTimer) clearTimeout(this._pendingActiveClearTimer);
-            this._pendingActiveClearTimer = setTimeout(() => { this._pendingActiveState = null; }, 3000);
+            this._pendingActiveClearTimer = setTimeout(() => { this._pendingActiveState = null; }, 30000);
             this._restorePendingState();
             return true;
         } catch (e) { console.warn('[TabManager restoreState] failed:', e); return false; }
@@ -311,6 +311,7 @@ const TabManager = {
         }
         this._updateHighlight();
         this._scrollTabIntoView(id);
+        this.saveState();
         requestAnimationFrame(() => this._captureTabPreview(tab));
         document.dispatchEvent(new CustomEvent('tabswitch', { detail: tab }));
     },

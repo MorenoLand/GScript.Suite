@@ -15,5 +15,14 @@
     const readDir = async path => { const normalized = String(path || '').replace(/^\.?[\\/]/, '').replace(/\\/g, '/').replace(/\/+$/, ''); if (normalized.toLowerCase() === 'levels') { const response = await fetch('/levels/index.json?_=' + Date.now(), { cache: 'no-store' }); if (response.ok) { const manifest = await response.json(); const files = Array.isArray(manifest) ? manifest : manifest?.files; if (Array.isArray(files)) return files.map(name => ({ name })); } } return (await invoke('read_dir', { path })).map(name => ({ name })); };
     const listen = (name, handler) => waitForRuntime().then(runtime => runtime.Events.On(name === 'wails://drag-drop' ? 'wails-file-drop' : name, event => { const data = event?.data ?? event?.payload ?? event; handler({ payload: data, data, name: event?.name || name }); }));
     const getWindow = () => ({ minimize: () => window.wails.Window.Minimise(), toggleMaximize: () => window.wails.Window.ToggleMaximise(), close: () => window.wails.Window.Close(), setTitle: title => window.wails.Window.SetTitle(title) });
-    window.__GSUITE__ = { core: { invoke }, event: { listen }, fs: { readTextFile: path => invoke('read_text_file', { path }), readFile, writeTextFile: (path, content) => invoke('write_text_file', { path, content }), writeFile, readDir }, dialog: { open: openDialog, save: saveDialog }, window: { getCurrentWindow: getWindow }, updater: { check: async () => { const version = await invoke('check_for_update'); return version ? { available: true, version } : { available: false }; }, doUpdate: () => invoke('do_update') } };
+    // The editors keep this API in a global named `_wails`, which is also where the Wails runtime keeps its own hooks
+    // (dispatchWailsEvent, invoke, ...). Build the API on that same object: as a separate object it replaced the
+    // runtime's, and every event sent from Go was dropped once an editor had loaded.
+    const shared = window._wails = window._wails || {};
+    window.__GSUITE__ = Object.assign(shared, { core: { invoke }, event: { listen }, fs: { readTextFile: path => invoke('read_text_file', { path }), readFile, writeTextFile: (path, content) => invoke('write_text_file', { path, content }), writeFile, readDir }, dialog: { open: openDialog, save: saveDialog }, window: { getCurrentWindow: getWindow }, updater: { check: async () => { const version = await invoke('check_for_update'); return version ? { available: true, version } : { available: false }; }, doUpdate: () => invoke('do_update') }  });
+    document.addEventListener('keydown', event => {
+        if (event.key !== 'F11' && event.key !== 'F12' && !(event.ctrlKey && event.shiftKey && event.key.toLowerCase() === 'i')) return;
+        event.preventDefault();
+        window.wails?.Window?.OpenDevTools?.();
+    });
 })();

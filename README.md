@@ -14,6 +14,8 @@ Includes a Gani animation editor (.gani) and a level editor (.nw), merged into a
 - **Setshape2/setimgpart Editor**: build tile shapes and generate GS1 or GS2 `setshape2` and `setimgpart` output.
 - **Code Beautifier**: format GraalScript code.
 - **Custom CSS Theme Editor**: customize the suite's editor appearance.
+- **GScript Reference**: look up GraalScript functions at api.gscript.dev and search folders of your own scripts.
+- **MCP Server**: lets AI agents (Claude Code, Claude Desktop, Cursor, ...) drive the desktop app to build levels, gmaps, NPC scripts, animations and particle effects, and see the results as screenshots. It can also pass on the tools of Remote Control, so an agent can send what it built to a live server. See [docs/mcp.md](./docs/mcp.md).
 
 ## "Legal Stoof"
 

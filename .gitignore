@@ -24,3 +24,4 @@ build/ios/
 build/darwin/Assets.car
 build/linux/GSuite.desktop
 *_test.go
+!mcp/*_test.go

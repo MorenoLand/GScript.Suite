@@ -14,6 +14,8 @@ import (
 	"time"
 
 	"github.com/wailsapp/wails/v3/pkg/application"
+
+	"gsuite/mcp"
 )
 
 type AppService struct {
@@ -27,6 +29,7 @@ type AppService struct {
 	openFileArg string
 	exeDir      string
 	version     string
+	mcp         *mcp.Server
 }
 
 func NewAppService(version string) *AppService {
