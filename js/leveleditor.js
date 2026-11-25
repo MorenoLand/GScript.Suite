@@ -2051,6 +2051,7 @@ class LevelEditor {
         if (!this.selectionTiles?.length) return;
         this.pushUndo();
         const entry = this._terrainForCurrentLevel() ? this._currentLevelEntry() : null;
+        const layer = entry ? 0 : this.currentLayer;
         let clearedHole = false;
         const sx = Math.min(this.selectionStartX, this.selectionEndX);
         const sy = Math.min(this.selectionStartY, this.selectionEndY);
@@ -2059,7 +2060,7 @@ class LevelEditor {
             if (t !== undefined && t >= 0) {
                 const tx = sx + x, ty = sy + y;
                 if (tx >= 0 && tx < this.level.width && ty >= 0 && ty < this.level.height) {
-                    this.level.setTile(this.currentLayer, tx, ty, t);
+                    this.level.setTile(layer, tx, ty, t);
                     if (entry?.terrainHoles?.delete(ty * this.level.width + tx)) clearedHole = true;
                 }
             }
@@ -2072,6 +2073,7 @@ class LevelEditor {
         if (!this.selectedTilesetTiles?.length) return;
         if (!this._tileUndoPushed) { this.pushUndo(); this._tileUndoPushed = true; }
         const entry = this._terrainForCurrentLevel() ? this._currentLevelEntry() : null;
+        const layer = entry ? 0 : this.currentLayer;
         let clearedHole = false;
         const sw = this.selectedTilesetTiles[0]?.length || 0, sh = this.selectedTilesetTiles.length;
         for (let y = 0; y < sh; y++) for (let x = 0; x < sw; x++) {
@@ -2079,7 +2081,7 @@ class LevelEditor {
             if (t !== undefined && t >= 0) {
                 const tx = cx + x, ty = cy + y;
                 if (tx >= 0 && tx < this.level.width && ty >= 0 && ty < this.level.height) {
-                    this.level.setTile(this.currentLayer, tx, ty, t);
+                    this.level.setTile(layer, tx, ty, t);
                     if (entry?.terrainHoles?.delete(ty * this.level.width + tx)) clearedHole = true;
                 }
             }
@@ -2310,13 +2312,14 @@ class LevelEditor {
         if (x >= 0 && x < this.level.width && y >= 0 && y < this.level.height) {
             const tileVal = this.currentTool === 'eraser' ? -1 : this.defaultTile;
             const entry = tileVal >= 0 && this._terrainForCurrentLevel() ? this._currentLevelEntry() : null;
+            const layer = entry ? 0 : this.currentLayer;
             let clearedHole = false;
             for (let dy = 0; dy < this.brushHeight; dy++) {
                 for (let dx = 0; dx < this.brushWidth; dx++) {
                     const tx = x + dx;
                     const ty = y + dy;
                     if (tx >= 0 && tx < this.level.width && ty >= 0 && ty < this.level.height) {
-                        this.level.setTile(this.currentLayer, tx, ty, tileVal);
+                        this.level.setTile(layer, tx, ty, tileVal);
                         if (entry?.terrainHoles?.delete(ty * this.level.width + tx)) clearedHole = true;
                     }
                 }
@@ -4326,7 +4329,7 @@ class LevelEditor {
         const entry = this.levels[index];
         const suiteTabsList = document.getElementById('suiteTabsList');
         if (window.tabManager && typeof window.tabManager.addTab === 'function' && suiteTabsList) {
-            if (window.tabManager.addTab('level', entry.name, { level: entry.level, index })) return;
+            if (window.tabManager.addTab('level', entry.name, { level: entry.level, index, name: entry.name, fullPath: entry.fullPath || '' })) return;
         }
         const tabsContainer = this.$('suiteTabsList');
         if (!tabsContainer) { return; }
